@@ -65,6 +65,10 @@
     <!-- Don't delete the closing tag! -->
     </svg>
   </div>
+
+  <!-- V2: choropleth world map (js/map.js) -->
+  <div class="vis-holder" id="vis-map"></div>
+
   
   <!-- Your writeup goes here -->
   <div class = "content-column">
@@ -116,12 +120,14 @@
     
     <ul>
       <li><a href="https://d3js.org/">D3: Data-Driven Documents</a> by Mike Bostock.</li>
+      <li>Country boundaries: <a href="https://www.naturalearthdata.com/">Natural Earth</a> 1:50m (public domain), via the <a href="https://github.com/topojson/world-atlas">world-atlas</a> package (ISC license), simplified with <a href="https://github.com/mbloch/mapshaper">mapshaper</a>.</li>
     </ul>
     
   </div>
   
   <!-- Scripts at the end avoid need for dealing with async, defer, or onload event handlers -->
   <script src="lib/d3.v7/d3.v7.min.js"></script>
+  <script src="js/map.js"></script>
   <script src="js/visualization.js"></script>
 </body>
 </html>
