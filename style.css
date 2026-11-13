@@ -77,3 +77,11 @@ h1, h2, h3 {
 		box-shadow:4px 4px 10px rgba(0,0,0,0.8);
 	}
 }
+
+/* V2: world map */
+.world-map { width: 100%; height: auto; display: block; }
+.world-map .map-background { fill: #f4f8fb; cursor: grab; }
+.world-map .country { stroke: #ffffff; stroke-width: 0.5px; vector-effect: non-scaling-stroke; cursor: pointer; transition: opacity 150ms; }
+.world-map .country.hovered { stroke: #333333; stroke-width: 1.5px; }
+.world-map .country.selected { stroke: #000000; stroke-width: 1.5px; }
+.world-map .country.faded { opacity: 0.25; }

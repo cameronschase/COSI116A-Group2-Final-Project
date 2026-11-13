@@ -2,7 +2,39 @@
 // variables and prevent 
 ((() => {
 
-  console.log("Hello, world!");
+  // Shared event bus that links the views (see the implementation plan).
+  const dispatch = d3.dispatch("select", "hover");
+
+  // TEMPORARY until the shared constants module (P3) lands: swap these for its
+  // palette and default thresholds so the map matches the scatterplot exactly.
+  const thresholds = { poverty: 0, completion: 0 };
+  const groupColor = d3.scaleOrdinal()
+    .domain(["Both improved", "Poverty fell, completion stalled",
+             "Completion improved only", "Neither improved much"])
+    .range(["#4e79a7", "#e15759", "#59a14f", "#f28e2b"]);
+
+  Promise.all([
+    d3.json("data/sdg.json"),
+    d3.json("data/world.geojson"),
+  ]).then(([sdg, world]) => {
+    const byId = new Map(sdg.countries.map(c => [c.m49, c]));
+    const groupOf = id => {
+      const c = byId.get(id);
+      return c ? group(c, thresholds.poverty, thresholds.completion) : null;
+    };
+
+    // V2: choropleth world map
+    const map = worldMap()
+      .groupOf(groupOf)
+      .color(groupColor)
+      .dispatcher(dispatch);
+    d3.select("#vis-map").datum(world).call(map);
+
+    // Selections from any view highlight the same countries on the map.
+    dispatch.on("select.map", (ids, source) => {
+      if (source !== "map") map.highlight(ids);
+    });
+  });
 
 })());
 
