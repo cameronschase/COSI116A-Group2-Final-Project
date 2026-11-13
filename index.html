@@ -55,8 +55,33 @@
   </div>
   
   <!-- Your visualization here -->
-  <!-- V2: choropleth world map (js/map.js) -->
-  <div class="vis-holder" id="vis-map"></div>
+  <div class="vis-holder">
+
+    <!-- V4 legend + I4 threshold sliders + I5 reset, shared by both views -->
+    <div class="controls">
+      <div id="vis-legend" class="legend"></div>
+      <div class="sliders">
+        <label for="thr-poverty">Poverty threshold
+          <input type="range" id="thr-poverty">
+          <output id="thr-poverty-value"></output> pp/yr
+        </label>
+        <label for="thr-completion">Completion threshold
+          <input type="range" id="thr-completion">
+          <output id="thr-completion-value"></output> pp/yr
+        </label>
+        <button type="button" id="reset-selection">Reset</button>
+      </div>
+    </div>
+
+    <!-- V1: quadrant scatterplot (js/scatterplot.js) -->
+    <div id="vis-scatter"></div>
+    <p class="vis-caption">Drag a box to select countries, or click a point. Shift-click adds to the selection. Slopes are least-squares trends through each country's survey points.</p>
+
+    <!-- V2: choropleth world map (js/map.js) -->
+    <div id="vis-map"></div>
+    <p class="vis-caption">Countries are filled with the group color from the scatterplot above. Gray means no trend is available. Scroll to zoom, drag to pan.</p>
+
+  </div>
 
   
   <!-- Your writeup goes here -->
@@ -116,6 +141,8 @@
   
   <!-- Scripts at the end avoid need for dealing with async, defer, or onload event handlers -->
   <script src="lib/d3.v7/d3.v7.min.js"></script>
+  <script src="js/constants.js"></script>
+  <script src="js/scatterplot.js"></script>
   <script src="js/map.js"></script>
   <script src="js/visualization.js"></script>
 </body>

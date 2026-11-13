@@ -85,3 +85,51 @@ h1, h2, h3 {
 .world-map .country.hovered { stroke: #333333; stroke-width: 1.5px; }
 .world-map .country.selected { stroke: #000000; stroke-width: 1.5px; }
 .world-map .country.faded { opacity: 0.25; }
+
+/* ---- Shared view chrome (P3 / V4 / V5) ---- */
+.vis-holder { max-width: 1000px; margin: 0 auto; }
+.controls {
+  display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;
+  max-width: 1000px; margin: 0 auto 16px; font-size: 14px;
+}
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.legend-item { display: flex; align-items: center; gap: 7px; cursor: pointer; user-select: none; }
+.legend-item:focus-visible { outline: 2px solid #333333; outline-offset: 2px; }
+.legend-swatch { width: 13px; height: 13px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,0.12); }
+.legend-label { color: #333333; }
+.legend-off { opacity: 0.35; }
+.sliders { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+.sliders label { display: flex; align-items: center; gap: 7px; color: #333333; }
+.sliders input[type="range"] { width: 130px; }
+.sliders output { font-variant-numeric: tabular-nums; min-width: 3.2em; }
+#reset-selection { font: inherit; padding: 3px 12px; cursor: pointer; }
+.vis-caption { max-width: 1000px; margin: 6px auto 28px; font-size: 13px; color: #5f6368; }
+
+.tooltip {
+  position: absolute; pointer-events: none; z-index: 10;
+  background: rgba(255,255,255,0.97); border: 1px solid #d0d4d9; border-radius: 5px;
+  padding: 7px 10px; font-size: 13px; line-height: 1.35; color: #333333;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12); transition: opacity 120ms;
+}
+
+/* ---- V1: quadrant scatterplot ---- */
+.quadrant-scatter { width: 100%; height: auto; display: block; }
+.quadrant-scatter .grid line { stroke: #9aa0a6; stroke-opacity: 0.16; shape-rendering: crispEdges; }
+.quadrant-scatter .axis text { fill: #5f6368; font-size: 12px; }
+.quadrant-scatter .axis path, .quadrant-scatter .axis line { stroke: #9aa0a6; }
+.quadrant-scatter .axis-title { fill: #333333; font-size: 13px; }
+.quadrant-scatter .threshold-line {
+  stroke: #9aa0a6; stroke-width: 1.5px; stroke-dasharray: 6 4; shape-rendering: crispEdges;
+}
+.quadrant-scatter .quadrant-label { font-size: 12px; font-weight: 600; opacity: 0.85; pointer-events: none; }
+.quadrant-scatter .country-point {
+  stroke: #ffffff; stroke-width: 1px; cursor: pointer; transition: opacity 150ms;
+}
+.quadrant-scatter .country-point.hovered { stroke: #333333; stroke-width: 2px; }
+.quadrant-scatter .country-point.selected { stroke: #000000; stroke-width: 2px; }
+.quadrant-scatter .country-point.faded { opacity: 0.2; }
+.quadrant-scatter .brush .selection { fill: #333333; fill-opacity: 0.06; stroke: #5f6368; stroke-dasharray: 3 3; }
+.quadrant-scatter .no-trend-note { fill: #5f6368; font-size: 12px; }
+
+/* I6: a dimmed legend group, in either view */
+.group-hidden { opacity: 0.08 !important; pointer-events: none; }
