@@ -27,6 +27,16 @@
       .dispatcher(dispatch);
     d3.select("#vis-map").datum(world).call(map);
 
+    // V3: trajectory panel. It keys countries on `id` and labels them with
+    // `group`, so adapt each record (m49 -> id, current thresholds -> group).
+    const trajectory = trajectoryPanel()
+      .colorOf(c => SDG.color(c.group));
+    d3.select("#vis-trajectory").call(trajectory);
+    let selectedIds = [];
+    const updateTrajectory = () => trajectory.update(
+      selectedIds.map(id => byId.get(id)).filter(Boolean)
+        .map(c => ({ ...c, id: c.m49, group: groupOf(c.m49) ?? "no trend" })));
+
     // V4: legend, built from the shared group order so it always matches.
     buildLegend(d3.select("#vis-legend"));
 
@@ -47,6 +57,10 @@
     });
     dispatch.on("select.scatter", (ids, source) => {
       if (source !== "scatter") scatter.highlight(ids);
+    });
+    dispatch.on("select.trajectory", ids => {
+      selectedIds = ids;
+      updateTrajectory();
     });
 
     // I3: placeholder tooltip so hover is visible while the detail panel is
@@ -77,6 +91,7 @@
           out.text(SDG.fmtSlope(thresholds[key]));
           scatter.thresholds({ [key]: thresholds[key] });
           map.recolor();
+          updateTrajectory();   // groups, and so line colors, depend on thresholds
         });
       out.text(SDG.fmtSlope(thresholds[key]));
     }

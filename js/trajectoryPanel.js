@@ -16,9 +16,15 @@
  *   id: "KEN", name: "Kenya", group: "Q1",
  *   poverty:    [{year: 2005, value: 43.4}, ...],   // raw survey points
  *   completion: [{year: 2003, value: 20.1}, ...],
- *   povertySlope: -1.2,        // optional; computed here if missing (pp/yr)
- *   completionSlope: 0.9       // optional; computed here if missing (pp/yr)
+ *   povertyReduction: 1.2,     // optional; pp/yr removed (positive = poverty fell)
+ *   completionGain: 0.9,       // optional; pp/yr gained
+ *   povertyYears: [2005, 2019], completionYears: [2003, 2020]   // optional spans
  * }
+ *
+ * Trends use SDG.slopePerYear (js/constants.js, load it first), so a country
+ * with fewer than 3 survey points gets no trend line here, matching the gray
+ * "no trend" fill in V1 and V2. The tooltip reports trends in the same
+ * direction as the rest of the page: poverty *removed* and completion *gained*.
  *
  * Usage:
  *   const panel = trajectoryPanel().colorOf(c => COLORS[c.group]);
@@ -47,22 +53,20 @@ function trajectoryPanel() {
     { key: "completion", title: "(b) Upper-secondary completion rate", yLabel: "% completing" }
   ];
 
-  // Least-squares fit y = a + b*x. Returns null with fewer than 2 distinct years.
+  // Least-squares fit y = a + b*x. The slope comes from SDG.slopePerYear so
+  // the panel applies the same rule as P2 (null with fewer than 3 points);
+  // the intercept is only needed here to draw the dashed trend line.
   function leastSquares(pts) {
-    if (!pts || pts.length < 2) return null;
-    const n = pts.length;
-    const mx = d3.mean(pts, p => p.year), my = d3.mean(pts, p => p.value);
-    let sxx = 0, sxy = 0;
-    pts.forEach(p => { sxx += (p.year - mx) ** 2; sxy += (p.year - mx) * (p.value - my); });
-    if (sxx === 0) return null;
-    const b = sxy / sxx;
+    const b = SDG.slopePerYear(pts);
+    if (b == null || !isFinite(b)) return null;
+    const valid = pts.filter(p => p.value != null);
+    const mx = d3.mean(valid, p => p.year), my = d3.mean(valid, p => p.value);
     return { slope: b, intercept: my - b * mx };
   }
 
-  const fmtSlope = s => (s == null || isNaN(s)) ? "no trend" :
-    (s > 0 ? "+" : "") + s.toFixed(2) + " pp/yr";
-  const spanText = pts => (pts && pts.length >= 2)
-    ? d3.min(pts, p => p.year) + "–" + d3.max(pts, p => p.year) : "n/a";
+  // Year span of a series, as [first, last] for SDG.fmtYears.
+  const spanOf = pts => (pts && pts.length)
+    ? [d3.min(pts, p => p.year), d3.max(pts, p => p.year)] : [null, null];
 
   function chart(selection) {
     // Build the static skeleton once.
@@ -148,10 +152,17 @@ function trajectoryPanel() {
       const pFit = leastSquares(c.poverty), cFit = leastSquares(c.completion);
       return Object.assign({}, c, {
         _fit: { poverty: pFit, completion: cFit },
-        // prefer precomputed slopes from the preprocessing script
-        _slope: {
-          poverty: c.povertySlope != null ? c.povertySlope : (pFit && pFit.slope),
-          completion: c.completionSlope != null ? c.completionSlope : (cFit && cFit.slope)
+        // Tooltip values in the page-wide direction. Prefer the precomputed
+        // P2 values; otherwise flip the poverty slope so a fall is positive.
+        _trend: {
+          povertyRemoved: c.povertyReduction !== undefined ? c.povertyReduction
+            : (pFit ? -pFit.slope : null),
+          completionGained: c.completionGain !== undefined ? c.completionGain
+            : (cFit ? cFit.slope : null)
+        },
+        _span: {
+          poverty: c.povertyYears || spanOf(c.poverty),
+          completion: c.completionYears || spanOf(c.completion)
         }
       });
     });
@@ -230,8 +241,8 @@ function trajectoryPanel() {
     tip.html(
       `<b>${c.name}</b> <span style="color:#666">(${c.group})</span><br>` +
       `${best.q.year}: <b>${best.q.value.toFixed(1)}</b> ${unit}<br>` +
-      `Poverty trend: ${fmtSlope(c._slope.poverty)} <span style="color:#666">(${spanText(c.poverty)})</span><br>` +
-      `Completion trend: ${fmtSlope(c._slope.completion)} <span style="color:#666">(${spanText(c.completion)})</span>`
+      `Poverty removed: ${SDG.labelSlope(c._trend.povertyRemoved)} <span style="color:#666">(${SDG.fmtYears(c._span.poverty)})</span><br>` +
+      `Completion gained: ${SDG.labelSlope(c._trend.completionGained)} <span style="color:#666">(${SDG.fmtYears(c._span.completion)})</span>`
     ).style("display", "block")
       .style("left", (ev.pageX + 14) + "px").style("top", (ev.pageY + 14) + "px");
 
