@@ -56,7 +56,10 @@
       if (source !== "map") map.highlight(ids);
     });
     dispatch.on("select.scatter", (ids, source) => {
-      if (source !== "scatter") scatter.highlight(ids);
+      if (source === "scatter") return;
+      // A selection from another view replaces the brushed one, so remove the
+      // brush box as well as moving the highlight.
+      scatter.clearBrush().highlight(ids);
     });
     dispatch.on("select.trajectory", ids => {
       selectedIds = ids;

@@ -14,6 +14,7 @@
  *
  *   scatter.thresholds({poverty: 0.2, completion: 0.5});  // I4 sliders
  *   scatter.highlight(["004", "008"]);                    // I2 from the map, [] clears
+ *   scatter.clearBrush();                                 // drop the box, keep the selection
  *   scatter.clear();                                      // I5 reset button
  *
  * Events sent on the dispatcher:
@@ -39,6 +40,7 @@ function quadrantScatter() {
   let rows = [];       // countries that have both trends
   let missing = 0;     // countries dropped for a missing trend (feeds V6)
   let selected = new Set();
+  let clearBrush = null;   // set once the brush exists
 
   function chart(selection) {
     selection.each(function (countries) {
@@ -128,7 +130,8 @@ function quadrantScatter() {
         .on("brush end", brushed);
       g.append("g").attr("class", "brush").call(brush);
 
-      chart.clearBrush = () => g.select(".brush").call(brush.move, null);
+      // Programmatic move: brushed() sees no sourceEvent, so nothing is re-emitted.
+      clearBrush = () => g.select(".brush").call(brush.move, null);
 
       // Points on top.
       points = g.append("g").attr("class", "points")
@@ -155,6 +158,7 @@ function quadrantScatter() {
           const next = event.shiftKey || event.metaKey || event.ctrlKey
             ? new Set(selected) : new Set();
           if (selected.has(d.m49) && next.size) next.delete(d.m49); else next.add(d.m49);
+          chart.clearBrush();   // the box no longer describes the selection
           emit([...next]);
         });
 
@@ -225,9 +229,17 @@ function quadrantScatter() {
     );
   }
 
+  // Remove the brush rectangle without changing the selection. Called when the
+  // selection comes from somewhere other than a brush gesture (a point click,
+  // or the map via I2), so a stale box never contradicts the highlight.
+  chart.clearBrush = function () {
+    if (clearBrush) clearBrush();
+    return chart;
+  };
+
   // I5: clear the brush and the selection.
   chart.clear = function () {
-    if (chart.clearBrush) chart.clearBrush();
+    chart.clearBrush();
     emit([]);
     return chart;
   };
