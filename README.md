@@ -1,10 +1,10 @@
-# COSI 116A Final Project Template
+# COSI 116A Group 2 Final Project: SDG Goals
 
-This template will help you get started with your project. Please look through all these materials so you know how to organize your project.
+Group Members: Cameron Chase, Zahira Ramirez Caceres, Gianna Crisha Saludo, Ashenaffi Yacob-Haliso
 
-## Hosting Your Project
+## Hosting the Project
 
-Your project is a static website: `index.html` plus the files it loads. At the end of the semester, if you would like your project hosted publicly, let the instructor know and we will upload it to a Brandeis COSI web address. The project is currently hosted at [https://cameronchase.net/COSI116A-Group2-Final-Project/](https://cameronchase.net/COSI116A-Group2-Final-Project/).
+Our project is hosted publicly at [https://cameronchase.net/COSI116A-Group2-Final-Project/](https://cameronchase.net/COSI116A-Group2-Final-Project/).
 
 ## Setup
 
@@ -24,35 +24,55 @@ Your project is a static website: `index.html` plus the files it loads. At the e
 
 1. Now open your web browser (Firefox or Chrome) and navigate to the URL: http://localhost:8000
 
-## Root Files
-* `README.md` is this explanatory file for the repo.
+## File Structure
 
-* `index.html` contains the main website content. It includes comments surrounded by `<!--` and `-->` to help guide you through making your edits.
+```
+.
+├── index.html               Main page: writeup, the three linked views, legend and controls
+├── style.css                Styles for the page and every view
+├── README.md                This file
+├── LICENSE                  Source code license
+├── data/
+│   ├── sdg.json             Per-country poverty and completion series and slopes (from scripts/export_json.py)
+│   └── world.geojson        Simplified country boundaries keyed by UN M49 code (from scripts/build_map.py)
+├── js/
+│   ├── constants.js         Shared groups, palette, thresholds, formatters, notable-country rule, 3-survey flag
+│   ├── scatterplot.js       V1: quadrant scatterplot with brushing and notable-country labels
+│   ├── map.js               V2: choropleth world map with zoom buttons, markers and 3-survey hatching
+│   ├── trajectoryPanel.js   V3: survey points and trend lines for the selected countries
+│   └── visualization.js     Loads the data, builds the views, links them, and builds the legend, sliders and tooltip
+├── scripts/                 Python preprocessing (run locally; not loaded by the page)
+│   ├── build.py             Reshapes the UN SDG Goal 1 and Goal 4 exports and fits per-country slopes
+│   ├── export_json.py       Turns build.py's output into data/sdg.json
+│   └── build_map.py         Joins simplified Natural Earth boundaries to the SDG data as data/world.geojson
+├── lib/
+│   └── d3.v7/               D3 v7 (d3.v7.min.js and its LICENSE)
+├── images/                  Screenshots, diagrams and photos
+├── files/                   Slides (PDF) and demo video (MP4)
+└── favicons/                Course favicons; do not change
+```
 
-* `style.css` contains the CSS.
+Each of `data`, `js`, `lib`, `images`, `files` and `favicons` also has its own `README.md`.
 
-* `LICENCE` is your source code license.
+The raw UN SDG exports (`Goal1-data.csv`, `Goal4-data.csv`, `CodeDescriptions.csv`) live in a local `og_dataset/` folder that is listed in `.gitignore` and is not in the repository.
 
-## Folders
-Each folder has an explanatory `README.md` file
+### Rebuilding the data
 
-* `data` is where you will put your data files.
+```
+python scripts/build.py og_dataset <out dir> # writes sdg_long.csv, country_year.csv, country_summary.csv
+python scripts/export_json.py <out dir> data/sdg.json
+python scripts/build_map.py <simplified countries GeoJSON> data/sdg.json data/world.geojson
+```
 
-* `favicons` contains the favicons for the course projects. You shouldn't change anything here.
+The header of `scripts/build_map.py` gives the one-time mapshaper command that produces the simplified boundary file.
 
-* `files` will contain your slides (PDF) and video (MP4).
+### Script load order
 
-* `images` will contain your screenshots, diagrams, and photos.
-
-* `js` will contain all JavaScript files you write.
-
-  * `visualization.js` is the main code that builds all your visualizations. Each visualization should be built following the [Reusable Chart model](https://bost.ocks.org/mike/chart/)
-  
-* `lib` will contain any JavaScript library you use. It currently includes D3.
+`index.html` loads `lib/d3.v7/d3.v7.min.js`, then `js/constants.js`, the three view files, and `js/visualization.js` last. Each view is a [Reusable Chart](https://bost.ocks.org/mike/chart/), and `visualization.js` links them through one shared `d3.dispatch`.
 
 ## Workflow
 
-As you work with your team, you may have issues merging your changes. We recommend you pick one member of the team to be the project manager and deal with merging any pull requests.
+Since Cameron is the team leader and he owns this GitHub repository, he is designated the project manager and he will deal with merging any pull requests when group members work on their own branches.
 
 Instead of all working directly out of the main branch, you can try adopting a Git branching model for development. See, e.g., [this article by Vincent Driessen](https://nvie.com/posts/a-successful-git-branching-model/).
 
