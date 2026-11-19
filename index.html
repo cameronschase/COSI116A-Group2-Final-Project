@@ -41,7 +41,7 @@
     
     <p><strong>Cameron Chase</strong>, <strong>Zahira Ramirez Caceres</strong>, <strong>Gianna Crisha-Saludo</strong>, <strong>Ashenaffi Yacob-Haliso</strong></p>
     
-    <p>Project-long Course Project as part of COSI 116A: Information Visualization, taught by <a href="https://cs.brandeis.edu/~dylan/">Prof. Dylan Cashman</a>, <a href="https://cs.brandeis.edu/">Brandeis University</a>.</p>
+    <p>Semester-long Course Project as part of COSI 116A: Information Visualization, taught by <a href="https://cs.brandeis.edu/~dylan/">Prof. Dylan Cashman</a>, <a href="https://cs.brandeis.edu/">Brandeis University</a>.</p>
     
     
     <h1>Motivation</h1>
@@ -51,10 +51,7 @@
     <p><em>Expectation: There is a clear focus, and a developed explanation of the problem, and a reasonable response is proposed.</em></p>
 
     
-    <h1>Visualization</h1>
-    
-    <p><em>Include the interactive visualization as part of this page. Static example follows.</em></p>
-    
+    <h1>Visualization</h1>    
   </div>
   
   <!-- Your visualization here -->
@@ -120,13 +117,92 @@
     <p><em>Expectation: Clearly describes domain tasks, processes, goals and abstract tasks for domain problems.</em></p>
 
     <h1>Design Process</h1>
-    
-    <p><em>Sketches and design choices to justify final visualization.</em></p>
 
-    <p><em>Expectation: Evidence of iterative improvement.
-    Logical discussion of design choices grounded in theory from course.
-    Discusses feedback from usability testing.</em></p>
+    <p>Our design moved through four stages: individual paper sketches, a combined Tableau prototype, an informal usability test of that prototype with three peers, and the D3 implementation on this page, which we continued to revise after it was running.</p>
 
+    <h2>Sketches</h2>
+
+    <p>We began with paper sketches of individual views. The three below correspond to the three views of the final design, and each was changed slightly along the way.</p>
+
+    <figure>
+      <img src="images/Scatterplot%20Sketch.png" alt="Sketch of a scatterplot of change in extreme poverty rate against change in upper-secondary completion rate, with points colored and shaped by region and a dashed selection box in the lower left.">
+      <figcaption>Scatterplot sketch; point marks on two aligned axes, with region encoded twice (color hue and shape) and a dashed box for selecting points.</figcaption>
+    </figure>
+
+    <p>The scatterplot sketch already had the main parts of the final view: one point mark per country, with the two rates of change on aligned position axes, the most effective channel for quantitative attributes. It used color hue and shape, the identity channels suited to categorical data, to encode region. In the final design hue carries the group a country falls in (which quadrant of the plot), and we dropped shape. Region is now carried by the map, since spatial region is the strongest identity channel and the map shows it directly.</p>
+
+    <figure>
+      <img src="images/Map%20Sketch.png" alt="Sketch of a world map in which completion rate is shown with hatching of three densities and extreme poverty rate with circles of different sizes, plus toggles for latest year and change since 2015.">
+      <figcaption>Map sketch; completion rate as hatching density in three bins, extreme poverty rate as proportional circles, and a toggle between the latest year and change since 2015.</figcaption>
+    </figure>
+
+    <p>The map sketch combined a choropleth (completion, binned into three ordinal levels and drawn as hatching) with a symbol map (poverty rate as circle size). The sketch itself shows the main risk of symbol maps: the circles over West Africa overlap and hide each other, an occlusion problem. Area is also a weak magnitude channel, which viewers tend to underestimate. The final map is a choropleth filled with the same group colors as the scatterplot, so the two views share one encoding and one legend. We reimplemented hatching in the final map with a different job: to mark countries whose trends rest on only three surveys.</p>
+
+    <figure>
+      <img src="images/Trajectory%20Sketch.png" alt="Sketch of a line chart of upper-secondary completion rate from 2000 to 2030 with solid observed lines, dashed projected lines toward a 2030 target band, and a sorted bar chart of each country's projected gap to the target.">
+      <figcaption>Trajectory sketch; observed completion as solid lines, linear projections to 2030 as dashed lines, and a sorted bar chart of each country's projected gap to the target.</figcaption>
+    </figure>
+
+    <p>The trajectory sketch asked whether countries are on pace for the 2030 target. It separated measured data (solid) from estimates (dashed) so that "users don't mistake estimates for measurements," and the final trajectory panel keeps that convention: solid lines connect measured survey points and dashed lines show least-squares fits. The final panel shows poverty and completion in two stacked charts that share one year axis, so the two indicators for a country line up in time. We did not carry over the projection to 2030 since many trends rest on few surveys (22 of the 116 countries we plot have a trend fit to only three), and extending those fits a decade past the data would present a straight-line extrapolation as if it were a forecast.</p>
+
+    <h2>Tableau Prototype</h2>
+
+    <figure>
+      <img src="images/Tableau%20Final%20Sketch.png" alt="Tableau dashboard with a quadrant scatterplot titled Where did poverty fall faster than completion rose, a world map titled Where these countries are, an empty trend area, a four-group legend in blue, gray, brown, and orange, and two threshold sliders set to 1.">
+      <figcaption>Tableau prototype; scatterplot and map linked by selection, an empty trend view that fills when countries are selected, and threshold sliders defaulting to 1.</figcaption>
+    </figure>
+
+    <p>We then combined the views in a Tableau dashboard which shows the final structure we have now: a quadrant scatterplot, a map in the same colors, a trend view for selected countries, and sliders that move the quadrant thresholds. This was the version our peers evaluated.</p>
+
+    <h2>Usability Testing (Peer Evaluation)</h2>
+
+    <p>Three peers reviewed the design we submitted using the course's ICE-T form, which rates statements under Insight, Time, Essence, and Confidence on a 1 to 7 scale, and asks for comments. The comments refer to the Tableau prototype's colors, footnote, and empty trend view which helped us guide our interactive visualization designing process.</p>
+
+    <p>The reviewers liked the linked views and the map. One wrote that "the linked scatterplot, map, and trend view work really well together," another that "the map is visually appealing," and one noted that the tooltip "shows the time span behind each country's trends." We kept all of these. The lowest ratings and the critical comments clustered on a few problems, which the below table pairs with the change we made in the final design.</p>
+
+    <table class="feedback-table">
+      <thead>
+        <tr><th>Feedback</th><th>Change in the Final Design</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>"The brown, orange, and gray are difficult to distinguish." The same reviewer suggested that color carry meaning, "where Red is bad and Green is good."</td>
+          <td>We replaced that palette with a colorblind safe one and reserved gray for countries with no trend. "Both improved" is green. We did not use a red and green pair, because an intermediate palette with both would likely fail a colorblindness check.</td>
+        </tr>
+        <tr>
+          <td>"Threshold is confusing" (Essence, rated 3) and "Threshold change?"</td>
+          <td>The thresholds default to 1 as in the prototype but we include notes on how to interpret threshold. Each slider shows its value in percentage points per year, and the dashed lines and map colors update as it moves.</td>
+        </tr>
+        <tr>
+          <td>"Poverty/completion y axis is confusing," and the quadrants "could be misleading because low poverty and low completion is on the bottom right" (rated 2).</td>
+          <td>The prototype's y-axis title was cut off. Both axis titles are now written in full and phrased as gains ("extreme poverty removed," "completion gained"), so right and up both mean improvement. The four group names sit in the corners of the plot in their group colors.</td>
+        </tr>
+        <tr>
+          <td>"Line graph is hard to follow," "a lot of outliers on line graph," and "trends line over time is difficult to understand" (rated 3). One reviewer asked to make trends "easier to compare when several countries are highlighted."</td>
+          <td>The trajectory panel shows each indicator in its own chart on a shared year axis. Hovering finds the nearest point, fades the other countries, and shows that country's values. The panel still starts empty, which one reviewer said "helps a lot."</td>
+        </tr>
+        <tr>
+          <td>"Brushing and linking view is a lot for users to understand" and "big cognitive load to understand" (rated 2).</td>
+          <td>Each view has a caption explaining its interactions, the map has explicit zoom buttons, and a reset button clears the selection. A selection made in one view clears the brush box in the scatterplot, so the views never show conflicting selections.</td>
+        </tr>
+        <tr>
+          <td>"It could be even clearer how missing data or different survey periods affect the classifications and trend estimates."</td>
+          <td>Trends fit to only three surveys are drawn as hollow rings in the scatterplot and hatched on the map, and the tooltip gives each trend's survey count and year span. Countries with no trend are gray on the map, and the scatterplot reports how many there are.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Design Choices in the Final Visualization</h2>
+
+    <p><strong>Encoding:</strong> The scatterplot puts the two most important attributes, each country's yearly change in poverty and in completion, on position along common scales, the highest-ranked channel. The group is a categorical attribute derived from those two positions, so it uses color hue, an identity channel. Because group membership is visible in both position and color, countries in the same group read as related by Gestalt similarity, and the same colors on the map let the eye match countries across views.</p>
+
+    <p><strong>Multiple Views:</strong> The three views are juxtaposed. They show the same countries with different encodings while sharing the same color scheme, and selecting countries in one highlights them in the others (brushing and linking). Juxtaposition follows the rule of thumb "eyes beat memory": a viewer compares the scatterplot, the map, and the trends side by side without holding one in memory. We accept the known cost of coordinated multiple views, that they are harder to learn, and our testing reflected it. The captions, the reset button, and the empty until selected trend panel are there to lower that cost.</p>
+
+    <p><strong>Interaction:</strong> The design follows Shneiderman's mantra. The scatterplot and map give the overview, brushing, clicking, the threshold sliders, the legend filters, and map zoom handle zoom and filter. The tooltip and the trajectory panel provide details on demand, so the main views stay uncluttered.</p>
+
+    <p><strong>Map:</strong> A choropleth suits the map's task, seeing where each group of countries lies. The projection is Natural Earth, a compromise projection that does not inflate high-latitude countries the way the Mercator-style map in our Tableau prototype did. Zoom and pan let viewers reach small countries, which is hard for a world-scale map.</p>
+
+    <p><strong>Data Quality & Annotation:</strong> The rings and hatching for three-survey trends work without color, following "get it right in black and white," and they appear in every view that shows a trend. Numbered labels mark notable countries and outliers, chosen by a fixed rule: the highest and lowest country on each axis, plus any country at least 2.5 standard deviations from either trend. Together with the three-survey caution flag, this lets a viewer notice unusual cases and see how much evidence stands behind them.</p>
 
     <h1>Conclusion</h1>
 
