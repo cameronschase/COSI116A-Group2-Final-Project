@@ -18,7 +18,8 @@
  *   "select" (ids, source)  where ids is an array of M49 codes, source = "map" (I2)
  *   "hover"  (event, feature, source) feature is null when the pointer leaves (I3, I7)
  *
- * Zoom/pan (I8) is built in so small island states can be reached and clicked.
+ * Zoom/pan (I8) is built in so small island states can be reached and clicked:
+ * scroll or drag on the map, or use the plus/minus buttons in its top-right corner.
  */
 function worldMap() {
   // ---- Settings (each has a getter/setter below) ----
@@ -35,7 +36,8 @@ function worldMap() {
 
   function chart(selection) {
     selection.each(function (geo) {
-      const svg = d3.select(this).append("svg")
+      const holder = d3.select(this).classed("world-map-holder", true);
+      const svg = holder.append("svg")
         .attr("class", "world-map")
         .attr("viewBox", `0 0 ${width} ${height}`)
         .attr("preserveAspectRatio", "xMidYMid meet")
@@ -82,15 +84,45 @@ function worldMap() {
 
       // I8: zoom and pan. (Borders keep their width while zoomed via
       // vector-effect: non-scaling-stroke in style.css.)
+      const [minK, maxK] = [1, 12];
       const zoom = d3.zoom()
-        .scaleExtent([1, 12])
+        .scaleExtent([minK, maxK])
         .translateExtent([[0, 0], [width, height]])
         .on("zoom", (event) => {
           g.attr("transform", event.transform);
+          updateZoomButtons(event.transform.k);
         });
       svg.call(zoom).on("dblclick.zoom", null);
 
       chart.resetZoom = () => svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
+
+      // Plus/minus buttons in the top-right corner. HTML rather than SVG so they
+      // are keyboard-focusable and their clicks never reach the map's handlers.
+      const controls = holder.append("div")
+        .attr("class", "map-zoom-controls")
+        .attr("role", "group")
+        .attr("aria-label", "Map zoom");
+      const zoomIn = controls.append("button")
+        .attr("type", "button")
+        .attr("class", "map-zoom-btn")
+        .attr("aria-label", "Zoom in")
+        .attr("title", "Zoom in")
+        .text("+")
+        .on("click", () => svg.transition().duration(250).call(zoom.scaleBy, 1.5));
+      const zoomOut = controls.append("button")
+        .attr("type", "button")
+        .attr("class", "map-zoom-btn")
+        .attr("aria-label", "Zoom out")
+        .attr("title", "Zoom out")
+        .text("\u2212")   // minus sign, same width as "+"
+        .on("click", () => svg.transition().duration(250).call(zoom.scaleBy, 1 / 1.5));
+
+      // Grey out a button once the zoom limit in its direction is reached.
+      function updateZoomButtons(k) {
+        zoomIn.property("disabled", k >= maxK - 1e-6);
+        zoomOut.property("disabled", k <= minK + 1e-6);
+      }
+      updateZoomButtons(1);
 
       chart.recolor();
       chart.highlight([]);

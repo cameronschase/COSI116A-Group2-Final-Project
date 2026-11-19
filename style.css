@@ -86,6 +86,24 @@ h1, h2, h3 {
 .world-map .country.selected { stroke: #000000; stroke-width: 1.5px; }
 .world-map .country.faded { opacity: 0.25; }
 
+/* I8: zoom buttons, top-right corner of the map */
+.world-map-holder { position: relative; }
+.map-zoom-controls {
+  position: absolute; top: 10px; right: 10px;
+  display: flex; flex-direction: column;
+  border: 1px solid #c4c9ce; border-radius: 4px; overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+.map-zoom-btn {
+  width: 30px; height: 30px; padding: 0; border: 0;
+  background: #ffffff; color: #333333;
+  font: 18px/30px sans-serif; cursor: pointer;
+}
+.map-zoom-btn + .map-zoom-btn { border-top: 1px solid #c4c9ce; }
+.map-zoom-btn:hover:not(:disabled) { background: #eef1f4; }
+.map-zoom-btn:focus-visible { outline: 2px solid #0072B2; outline-offset: -2px; }
+.map-zoom-btn:disabled { color: #b0b5ba; cursor: default; }
+
 /* ---- Shared view chrome (P3 / V4 / V5) ---- */
 .vis-holder { max-width: 1000px; margin: 0 auto; }
 .controls {
