@@ -143,6 +143,11 @@ h1, h2, h3 {
 .quadrant-scatter .country-point {
   stroke: #ffffff; stroke-width: 1px; cursor: pointer; transition: opacity 150ms;
 }
+/* Slope fit to the minimum survey count: a ring in the group color. Comes before
+   .hovered/.selected so those strokes still win. */
+.quadrant-scatter .country-point.thin-evidence {
+  fill-opacity: 0.18; stroke: var(--group-color); stroke-width: 1.75px;
+}
 .quadrant-scatter .country-point.hovered { stroke: #333333; stroke-width: 2px; }
 .quadrant-scatter .country-point.selected { stroke: #000000; stroke-width: 2px; }
 .quadrant-scatter .country-point.faded { opacity: 0.2; }
@@ -151,3 +156,35 @@ h1, h2, h3 {
 
 /* I6: a dimmed legend group, in either view */
 .group-hidden { opacity: 0.08 !important; pointer-events: none; }
+
+/* ---- Annotations: notable countries and thin evidence (V1, V2, V4) ---- */
+.annotation, .annotation-marker { cursor: pointer; transition: opacity 150ms; }
+.annotation.faded, .annotation-marker.faded { opacity: 0.25; }
+.annotation-leader { stroke: #5f6368; stroke-width: 1px; }
+.annotation-badge { fill: #333333; stroke: #ffffff; stroke-width: 1.5px; }
+.annotation-number { fill: #ffffff; font-size: 10px; font-weight: 700; pointer-events: none; }
+.annotation-name {
+  fill: #333333; font-size: 12px;
+  paint-order: stroke; stroke: #ffffff; stroke-width: 3px; stroke-linejoin: round;
+}
+.annotation:hover .annotation-badge, .annotation-marker:hover .annotation-badge { fill: #000000; }
+
+.marker-leader { stroke: #333333; stroke-width: 1px; }
+.marker-anchor { fill: #333333; stroke: #ffffff; stroke-width: 0.75px; }
+.world-map .hatch { pointer-events: none; transition: opacity 150ms; }
+.world-map .hatch.faded { opacity: 0.25; }
+.hatch-line { stroke: #ffffff; stroke-width: 1.4px; stroke-opacity: 0.85; }
+
+.legend-static { cursor: default; }
+.legend-notes .legend-item { padding: 2px 8px; border: 1px solid transparent; border-radius: 4px; }
+.legend-notes .legend-item:hover { border-color: #c4c9ce; }
+.legend-notes .legend-item.legend-focus { background: #eef1f4; border-color: #5f6368; }
+.legend-notes { flex-basis: 100%; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; }
+.legend-glyph { display: block; overflow: visible; }
+/* Neutral (white + gray) because the ring and hatch apply to every group color. */
+.legend-thin-point { fill: #ffffff; stroke: #5f6368; stroke-width: 1.75px; }
+.legend-thin-area { fill: #ffffff; stroke: #c4c9ce; stroke-width: 1px; }
+.legend-hatch-line { stroke: #5f6368; stroke-width: 1.2px; }
+
+.tip-caution { margin-top: 4px; color: #8a5a00; font-weight: 600; }
+.tip-annotation { margin-top: 4px; padding-top: 4px; border-top: 1px solid #e3e6e9; }

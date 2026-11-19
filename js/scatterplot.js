@@ -15,6 +15,8 @@
  *   scatter.thresholds({poverty: 0.2, completion: 0.5});  // I4 sliders
  *   scatter.highlight(["004", "008"]);                    // I2 from the map, [] clears
  *   scatter.clearBrush();                                 // drop the box, keep the selection
+ *   scatter.annotations(SDG.notableCountries(countries)); // numbered labels, set before .call
+ *   scatter.syncOverlays();                               // after the I6 legend dims a group
  *   scatter.clear();                                      // I5 reset button
  *
  * Events sent on the dispatcher:
@@ -29,9 +31,11 @@ function quadrantScatter() {
   let thresholds = { ...SDG.DEFAULT_THRESHOLDS };
   let dispatcher = null;
   let radius = 5;
+  let annotations = [];  // from SDG.notableCountries; drawn as numbered labels
 
   // ---- Internal state ----
   let points;          // circle selection
+  let labels;          // annotation label groups
   let x, y;            // scales
   let xAxisG, yAxisG;
   let vLine, hLine;    // dashed threshold lines
@@ -142,6 +146,7 @@ function quadrantScatter() {
         .attr("r", radius)
         .attr("cx", d => x(d.povertyReduction))
         .attr("cy", d => y(d.completionGain))
+        .classed("thin-evidence", SDG.isThinEvidence)   // drawn as a ring (style.css)
         .on("mouseover", function (event, d) {
           d3.select(this).raise().classed("hovered", true);
           if (dispatcher) dispatcher.call("hover", null, event, d, "scatter");
@@ -153,16 +158,11 @@ function quadrantScatter() {
           d3.select(this).classed("hovered", false);
           if (dispatcher) dispatcher.call("hover", null, event, null, "scatter");
         })
-        .on("click", (event, d) => {
-          event.stopPropagation();
-          const next = event.shiftKey || event.metaKey || event.ctrlKey
-            ? new Set(selected) : new Set();
-          if (selected.has(d.m49) && next.size) next.delete(d.m49); else next.add(d.m49);
-          chart.clearBrush();   // the box no longer describes the selection
-          emit([...next]);
-        });
+        .on("click", (event, d) => clickSelect(event, d.m49));
 
       points.append("title").text(d => d.name);  // keyboard and screen-reader fallback
+
+      drawAnnotations(g.append("g").attr("class", "annotations"), innerW, innerH, g);
 
       // V6: how many countries the selection cannot show.
       noTrendNote = svg.append("text")
@@ -187,6 +187,109 @@ function quadrantScatter() {
     });
   }
 
+  // Plain click selects one country; Shift/Cmd/Ctrl-click toggles it in the
+  // current selection. Shared by points and annotation labels.
+  function clickSelect(event, id) {
+    event.stopPropagation();
+    const next = event.shiftKey || event.metaKey || event.ctrlKey
+      ? new Set(selected) : new Set();
+    if (selected.has(id) && next.size) next.delete(id); else next.add(id);
+    chart.clearBrush();   // the box no longer describes the selection
+    emit([...next]);
+  }
+
+  // Numbered labels with leader lines for the notable countries. Each label is
+  // placed greedily, in rank order, at whichever of 24 candidate offsets
+  // overlaps the fewest points, earlier labels and quadrant names while
+  // staying inside the plot.
+  function drawAnnotations(layer, innerW, innerH, g) {
+    const byId = new Map(rows.map(d => [d.m49, d]));
+    const list = annotations.filter(a => byId.has(a.m49));
+    const BADGE = 8;   // badge radius
+    const GAP = 4;     // badge to text
+
+    labels = layer.selectAll("g.annotation")
+      .data(list, a => a.m49)
+      .join("g")
+      .attr("class", "annotation")
+      .attr("role", "button")
+      .attr("aria-label", a => `Notable country ${a.rank}: ${a.name}`);
+
+    labels.append("line").attr("class", "annotation-leader");
+    labels.append("circle").attr("class", "annotation-badge").attr("r", BADGE);
+    labels.append("text").attr("class", "annotation-number")
+      .attr("text-anchor", "middle").attr("dy", "0.35em")
+      .text(a => a.rank);
+    labels.append("text").attr("class", "annotation-name")
+      .attr("dy", "0.35em")
+      .text(a => a.name);
+
+    // Obstacles: every point, and the four quadrant names.
+    const pts = rows.map(d => [x(d.povertyReduction), y(d.completionGain)]);
+    const blocked = [];
+    quadLabels.each(function () {
+      const b = this.getBBox();
+      blocked.push([b.x, b.y, b.x + b.width, b.y + b.height]);
+    });
+
+    const overlap = (a, b) =>
+      Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) *
+      Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
+
+    labels.each(function (a) {
+      const lbl = d3.select(this);
+      const d = byId.get(a.m49);
+      const px = x(d.povertyReduction), py = y(d.completionGain);
+      const tw = lbl.select(".annotation-name").node().getComputedTextLength();
+
+      let best = null;
+      for (const dist of [22, 36, 54]) {
+        for (let k = 0; k < 8; k++) {
+          const ang = (k * Math.PI) / 4;
+          const bx = px + dist * Math.cos(ang), by = py - dist * Math.sin(ang);
+          const right = Math.cos(ang) >= -1e-9;   // text runs away from the point
+          const box = right
+            ? [bx - BADGE, by - BADGE, bx + BADGE + GAP + tw, by + BADGE]
+            : [bx - BADGE - GAP - tw, by - BADGE, bx + BADGE, by + BADGE];
+          let score = dist / 100;
+          if (box[0] < 0 || box[1] < 0 || box[2] > innerW || box[3] > innerH) score += 1000;
+          for (const [qx, qy] of pts) {
+            if (qx === px && qy === py) continue;
+            score += overlap(box, [qx - radius, qy - radius, qx + radius, qy + radius]) > 0 ? 1 : 0;
+          }
+          for (const b of blocked) score += overlap(box, b) > 0 ? 20 : 0;
+          if (!best || score < best.score) best = { score, bx, by, right, box };
+        }
+      }
+      blocked.push(best.box);
+
+      const dx = best.bx - px, dy = best.by - py, len = Math.hypot(dx, dy);
+      lbl.select(".annotation-leader")
+        .attr("x1", px + (dx / len) * (radius + 1)).attr("y1", py + (dy / len) * (radius + 1))
+        .attr("x2", best.bx - (dx / len) * BADGE).attr("y2", best.by - (dy / len) * BADGE);
+      lbl.selectAll(".annotation-badge, .annotation-number")
+        .attr("transform", `translate(${best.bx},${best.by})`);
+      lbl.select(".annotation-name")
+        .attr("x", best.right ? best.bx + BADGE + GAP : best.bx - BADGE - GAP)
+        .attr("y", best.by)
+        .attr("text-anchor", best.right ? "start" : "end");
+    });
+
+    labels
+      .on("mouseover", (event, a) => {
+        points.filter(d => d.m49 === a.m49).raise().classed("hovered", true);
+        if (dispatcher) dispatcher.call("hover", null, event, byId.get(a.m49), "scatter");
+      })
+      .on("mousemove", (event, a) => {
+        if (dispatcher) dispatcher.call("hover", null, event, byId.get(a.m49), "scatter");
+      })
+      .on("mouseout", (event, a) => {
+        points.filter(d => d.m49 === a.m49).classed("hovered", false);
+        if (dispatcher) dispatcher.call("hover", null, event, null, "scatter");
+      })
+      .on("click", (event, a) => clickSelect(event, a.m49));
+  }
+
   function pad([lo, hi]) {
     const slack = (hi - lo) * 0.06 || 1;
     return [lo - slack, hi + slack];
@@ -200,7 +303,9 @@ function quadrantScatter() {
   // Redraw fills and threshold lines. Call after the I4 sliders move.
   chart.recolor = function () {
     if (!points) return chart;
-    points.attr("fill", d => SDG.color(SDG.groupOf(d, thresholds.poverty, thresholds.completion)));
+    points
+      .attr("fill", d => SDG.color(SDG.groupOf(d, thresholds.poverty, thresholds.completion)))
+      .style("--group-color", d => SDG.color(SDG.groupOf(d, thresholds.poverty, thresholds.completion)));
     vLine.attr("x1", x(thresholds.poverty)).attr("x2", x(thresholds.poverty));
     hLine.attr("y1", y(thresholds.completion)).attr("y2", y(thresholds.completion));
     return chart;
@@ -215,7 +320,17 @@ function quadrantScatter() {
       .classed("selected", d => set.has(d.m49))
       .classed("faded", d => set.size > 0 && !set.has(d.m49));
     points.filter(".selected").raise();
+    if (labels) labels.classed("faded", a => set.size > 0 && !set.has(a.m49));
     updateNote();
+    return chart;
+  };
+
+  // Copy the I6 legend dimming from each point onto its annotation label.
+  chart.syncOverlays = function () {
+    if (!labels) return chart;
+    const hidden = new Set();
+    points.filter(".group-hidden").each(d => hidden.add(d.m49));
+    labels.classed("group-hidden", a => hidden.has(a.m49));
     return chart;
   };
 
@@ -260,6 +375,7 @@ function quadrantScatter() {
   chart.margin = function (_) { return arguments.length ? (margin = _, chart) : margin; };
   chart.radius = function (_) { return arguments.length ? (radius = _, chart) : radius; };
   chart.dispatcher = function (_) { return arguments.length ? (dispatcher = _, chart) : dispatcher; };
+  chart.annotations = function (_) { return arguments.length ? (annotations = _, chart) : annotations; };
 
   return chart;
 }
