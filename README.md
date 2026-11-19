@@ -1,4 +1,4 @@
-# COSI 116A Group 2 Final Project: SDG Goals
+# COSI 116A Group 2 Final Project: Poverty and Education Progress in the UN SDGs
 
 Group Members: Cameron Chase, Zahira Ramirez Caceres, Gianna Crisha Saludo, Ashenaffi Yacob-Haliso
 
