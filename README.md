@@ -4,7 +4,7 @@ This template will help you get started with your project. Please look through a
 
 ## Hosting Your Project
 
-Your project is a static website: `index.html` plus the files it loads. At the end of the semester, if you would like your project hosted publicly, let the instructor know and we will upload it to a Brandeis COSI web address.
+Your project is a static website: `index.html` plus the files it loads. At the end of the semester, if you would like your project hosted publicly, let the instructor know and we will upload it to a Brandeis COSI web address. The project is currently hosted at [https://cameronchase.net/COSI116A-Group2-Final-Project/](https://cameronchase.net/COSI116A-Group2-Final-Project/).
 
 ## Setup
 
