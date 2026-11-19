@@ -211,7 +211,7 @@
     notable.append("svg").attr("class", "legend-glyph").attr("width", 16).attr("height", 16)
       .html(`<circle cx="8" cy="8" r="7.5" class="annotation-badge"/>`
         + `<text x="8" y="8" dy="0.35em" text-anchor="middle" class="annotation-number">1</text>`);
-    notable.append("span").attr("class", "legend-label").text("Notable Country/Outlier (numbered)");
+    notable.append("span").attr("class", "legend-label").text("Notable country/outlier (numbered)");
 
     wireToggle(notes.selectAll(".legend-item"), focused, { startsOn: false });
     notes.selectAll(".legend-item")
