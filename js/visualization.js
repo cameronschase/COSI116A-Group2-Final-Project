@@ -16,7 +16,8 @@
   Promise.all([
     d3.json("data/sdg.json"),
     d3.json("data/world.geojson"),
-  ]).then(([sdg, world]) => {
+    d3.csv("data/regions.csv"),
+  ]).then(([sdg, world, regions]) => {
     const byId = new Map(sdg.countries.map(c => [c.m49, c]));
     const groupOf = id => SDG.groupOf(byId.get(id), thresholds.poverty, thresholds.completion);
 
@@ -57,7 +58,19 @@
     // and, if any filter is active, it matches at least one of them.
     let legendHidden = new Set();    // groups toggled off
     let legendFocused = new Set();   // LEGEND_THIN / LEGEND_NOTABLE toggled on
+    // I9: region filter. regionOf covers every country on the map (also the
+    // gray ones with no SDG data), so the filter dims the whole map evenly.
+    const regionOf = new Map(regions.map(r => [r.m49, r]));
+    let regionFilter = { region: "", subregion: "" };   // "" = all
+    const inRegion = id => {
+      if (!regionFilter.region) return true;
+      const r = regionOf.get(id);
+      if (!r || r.region !== regionFilter.region) return false;
+      return !regionFilter.subregion || r.subregion === regionFilter.subregion;
+    };
+
     const isLegendHidden = id => {
+      if (!inRegion(id)) return true;
       const c = byId.get(id);
       if (legendFocused.size) {
         const match = !!c && (
@@ -83,10 +96,54 @@
     wireSlider("#thr-poverty", "poverty");
     wireSlider("#thr-completion", "completion");
 
-    // I5: reset.
+    // I9: region and sub-region dropdowns.
+    const regionSel = d3.select("#region-filter");
+    const subregionSel = d3.select("#subregion-filter");
+    const regionNames = [...new Set(regions.map(r => r.region))].sort();
+    regionSel.selectAll("option.region").data(regionNames).join("option")
+      .attr("class", "region").attr("value", d => d).text(d => d);
+    const fillSubregions = () => {
+      const subs = regionFilter.region
+        ? [...new Set(regions.filter(r => r.region === regionFilter.region).map(r => r.subregion))].sort()
+        : [];
+      subregionSel.selectAll("option.subregion").data(subs, d => d).join("option")
+        .attr("class", "subregion").attr("value", d => d).text(d => d);
+      subregionSel.property("value", regionFilter.subregion)
+        .property("disabled", !regionFilter.region);
+    };
+    const applyRegion = () => {
+      fillSubregions();
+      applyLegend();
+      const ids = regions.filter(r => inRegion(r.m49) && byId.has(r.m49)).map(r => r.m49);
+      if (map.zoomTo) map.zoomTo(regionFilter.region ? ids : []);
+      const withTrend = ids.filter(id => groupOf(id) != null).length;
+      d3.select("#region-count").text(regionFilter.region
+        ? `${withTrend} of these countries have both trends`
+        : "");
+    };
+    regionSel.on("change", function () {
+      regionFilter = { region: this.value, subregion: "" };
+      applyRegion();
+    });
+    subregionSel.on("change", function () {
+      regionFilter = { ...regionFilter, subregion: this.value };
+      applyRegion();
+    });
+    fillSubregions();
+
+    // I5: reset. Also clears the region filter (I9) and the "Where do you
+    // fit" panel (I10).
     d3.select("#reset-selection").on("click", () => {
       scatter.clear();
       if (map.resetZoom) map.resetZoom();
+      if (regionFilter.region) {
+        regionFilter = { region: "", subregion: "" };
+        regionSel.property("value", "");
+        fillSubregions();
+        applyLegend();
+        d3.select("#region-count").text("");
+      }
+      showFit(null);
     });
 
     // I1 and I2: a selection made in any view highlights the same countries
@@ -104,6 +161,98 @@
       selectedIds = ids;
       updateTrajectory();
     });
+    // I10: when exactly one country is selected in any view, describe it in
+    // the "Where do you fit" panel.
+    dispatch.on("select.fit", (ids, source) => {
+      if (source === "fit") return;
+      if (ids.length === 1) showFit(ids[0]);
+    });
+
+    // I10: "Where does your country fit?" Pick a country to select it in every
+    // view, see how its trends compare with the other countries and its
+    // sub-region, and get links to organizations working on what lags.
+    const fitSel = d3.select("#fit-country");
+    const named = sdg.countries.slice().sort((a, b) => d3.ascending(a.name, b.name));
+    fitSel.selectAll("option.country").data(named).join("option")
+      .attr("class", "country").attr("value", c => c.m49).text(c => c.name);
+    fitSel.on("change", function () {
+      const id = this.value;
+      showFit(id || null);
+      // Countries without both trends have no point or color, so (as on the
+      // map) they are described but not selected.
+      const ids = id && groupOf(id) != null ? [id] : [];
+      dispatch.call("select", null, ids, "fit");
+    });
+
+    const withBoth = sdg.countries.filter(c => c.povertyReduction != null && c.completionGain != null);
+    // Share of countries (with that trend) the given value beats, as a whole percent.
+    const beats = (key, v) => {
+      const vals = sdg.countries.map(c => c[key]).filter(x => x != null);
+      return Math.round(100 * vals.filter(x => x < v).length / vals.length);
+    };
+    const latest = pts => (pts && pts.length ? pts[pts.length - 1] : null);
+    const fmtPct = d3.format(".1f");
+
+    function showFit(id) {
+      const out = d3.select("#fit-result");
+      fitSel.property("value", id || "");
+      const c = id && byId.get(id);
+      if (!c) { out.html("").classed("fit-empty", true); return; }
+      out.classed("fit-empty", false);
+      const grp = groupOf(id);
+      const reg = regionOf.get(id);
+      const lp = latest(c.poverty), lc = latest(c.completion);
+
+      let html = `<h3>${c.name}${reg ? ` <span class="fit-region">${reg.subregion}, ${reg.region}</span>` : ""}</h3>`;
+      html += `<p class="fit-group">`
+        + (grp == null
+          ? `<span class="legend-swatch" style="background:${SDG.NO_DATA}"></span> No group: this country does not have enough surveys for both trends.`
+          : `<span class="legend-swatch" style="background:${SDG.color(grp)}"></span> <strong>${grp}</strong> at the current thresholds.`)
+        + `</p><ul>`;
+      html += `<li><strong>Extreme poverty:</strong> `
+        + (lp ? `${fmtPct(lp.value)}% in ${lp.year}. ` : "no surveys. ")
+        + (c.povertyReduction != null
+          ? `Falling by ${SDG.labelSlope(c.povertyReduction)}, faster than ${beats("povertyReduction", c.povertyReduction)}% of countries with a poverty trend.`
+          : "Too few surveys for a trend.")
+        + `</li>`;
+      html += `<li><strong>Upper-secondary completion:</strong> `
+        + (lc ? `${fmtPct(lc.value)}% in ${lc.year}. ` : "no surveys. ")
+        + (c.completionGain != null
+          ? `Rising by ${SDG.labelSlope(c.completionGain)}, faster than ${beats("completionGain", c.completionGain)}% of countries with a completion trend.`
+          : "Too few surveys for a trend.")
+        + `</li>`;
+      // Compare with the median of the same sub-region.
+      if (reg && grp != null) {
+        const peers = withBoth.filter(p => (regionOf.get(p.m49) || {}).subregion === reg.subregion);
+        if (peers.length > 1) {
+          const mp = d3.median(peers, p => p.povertyReduction);
+          const mc = d3.median(peers, p => p.completionGain);
+          html += `<li><strong>Compared with ${reg.subregion}</strong> (${peers.length} countries with both trends):`
+            + ` poverty is falling ${c.povertyReduction >= mp ? "faster" : "slower"} than the median (${SDG.labelSlope(mp)})`
+            + ` and completion is rising ${c.completionGain >= mc ? "faster" : "slower"} than the median (${SDG.labelSlope(mc)}).</li>`;
+        }
+      }
+      html += `</ul>`;
+      if (SDG.isThinEvidence(c)) {
+        html += `<p class="tip-caution">At least one trend is fit to only ${SDG.THIN_EVIDENCE_N} surveys. Read with caution.</p>`;
+      }
+
+      // Organizations: lead with the goal that is lagging for this country.
+      const povLags = c.povertyReduction == null || c.povertyReduction < thresholds.poverty;
+      const cmpLags = c.completionGain == null || c.completionGain < thresholds.completion;
+      const lists = [
+        { title: "Ending extreme poverty (SDG 1)", lags: povLags, orgs: ORGS.poverty },
+        { title: "Getting students through secondary school (SDG 4)", lags: cmpLags, orgs: ORGS.education },
+      ].sort((a, b) => b.lags - a.lags);
+      html += `<div class="fit-orgs"><p><strong>Learn more or get involved</strong></p>`;
+      for (const l of lists) {
+        html += `<p class="fit-orgs-title">${l.title}${l.lags ? " <em>(below threshold here)</em>" : ""}</p><ul>`
+          + l.orgs.map(o => `<li><a href="${o.url}" target="_blank" rel="noopener">${o.name}</a>: ${o.what}</li>`).join("")
+          + `</ul>`;
+      }
+      html += `</div>`;
+      out.html(html);
+    }
 
     // I3: placeholder tooltip so hover is visible while the detail panel is
     // built. Ashenaffi owns the full version; replace the body below.
@@ -149,6 +298,22 @@
       out.text(SDG.fmtSlope(thresholds[key]));
     }
   });
+
+  // I10: organizations linked from the "Where do you fit" panel. Global
+  // organizations only, so every country gets links that apply to it.
+  const ORGS = {
+    poverty: [
+      { name: "UN SDG 1: No Poverty", url: "https://sdgs.un.org/goals/goal1", what: "the targets and indicators behind this page's poverty data" },
+      { name: "World Bank: Poverty", url: "https://www.worldbank.org/en/topic/poverty", what: "poverty research and country data" },
+      { name: "UNDP", url: "https://www.undp.org/", what: "UN development programme working in about 170 countries" },
+    ],
+    education: [
+      { name: "UN SDG 4: Quality Education", url: "https://sdgs.un.org/goals/goal4", what: "the targets and indicators behind this page's completion data" },
+      { name: "UNESCO Institute for Statistics", url: "https://uis.unesco.org/", what: "the source of the completion-rate indicator" },
+      { name: "Global Partnership for Education", url: "https://www.globalpartnership.org/", what: "funds education systems in lower-income countries" },
+      { name: "UNICEF: Education", url: "https://www.unicef.org/education", what: "keeps children in school, including in emergencies" },
+    ],
+  };
 
   // V4: legend (I6). Group entries are on by default and clicking one hides
   // that group in V1 and V2. The two annotation entries are off by default and
