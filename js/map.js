@@ -18,6 +18,7 @@
  *   map.annotations(SDG.notableCountries(countries))  // numbered markers
  *      .isThin(m49 => true);                         // hatch slopes fit to the minimum survey count
  *   map.syncOverlays();       // after the I6 legend dims a group
+ *   map.zoomTo(["032", "076"]);  // I9: frame these countries; [] zooms back out
  *
  * Events sent on the dispatcher:
  *   "select" (ids, source)  where ids is an array of M49 codes, source = "map" (I2)
@@ -185,6 +186,26 @@ function worldMap() {
       svg.call(zoom).on("dblclick.zoom", null);
 
       chart.resetZoom = () => svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
+
+      // I9: zoom so the given countries fill the view (used by the region
+      // filter). Each country is framed by its largest polygon, so overseas
+      // territories (e.g. French Guiana under France) do not stretch the box.
+      // An empty list zooms back out.
+      chart.zoomTo = (ids) => {
+        const set = new Set(ids);
+        const boxes = geo.features
+          .filter(f => set.has(f.id))
+          .map(f => path.bounds(mainPolygon(f)));
+        if (!boxes.length) return chart.resetZoom();
+        const x0 = d3.min(boxes, b => b[0][0]), y0 = d3.min(boxes, b => b[0][1]);
+        const x1 = d3.max(boxes, b => b[1][0]), y1 = d3.max(boxes, b => b[1][1]);
+        const k = Math.max(minK, Math.min(maxK, 0.9 / Math.max((x1 - x0) / width, (y1 - y0) / height)));
+        const t = d3.zoomIdentity
+          .translate(width / 2, height / 2)
+          .scale(k)
+          .translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
+        svg.transition().duration(600).call(zoom.transform, t);
+      };
 
       // Plus/minus buttons in the top-right corner. HTML rather than SVG so they
       // are keyboard-focusable and their clicks never reach the map's handlers.

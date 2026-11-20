@@ -65,19 +65,46 @@
         </label>
         <button type="button" id="reset-selection">Reset</button>
       </div>
+      <!-- I9: region filters (UN M49 regions, data/regions.csv) -->
+      <div class="region-filters">
+        <label for="region-filter">Region
+          <select id="region-filter"><option value="">All regions</option></select>
+        </label>
+        <label for="subregion-filter">Sub-region
+          <select id="subregion-filter"><option value="">All sub-regions</option></select>
+        </label>
+        <span id="region-count" class="region-count" aria-live="polite"></span>
+      </div>
     </div>
 
+    <!-- V5: how to read the slopes and how to select, shared by all three views -->
+    <p class="vis-note"><strong>How to read this:</strong> each country's trend is the least-squares slope through its survey points from 2000 to 2025, in percentage points per year. A trend needs at least 3 surveys. Positive numbers mean improvement on both axes: poverty went down, or completion went up. The sliders set how fast a country must improve to count as improving.</p>
+    <p class="vis-note"><strong>To explore:</strong> select countries by dragging a box on the scatterplot or clicking a point or a country on the map. Shift + Click adds more countries. Your selection is highlighted in every view and its survey history appears in the trajectory panel. Use the legend or the region menus to filter, and Reset to start over.</p>
+
     <!-- V1: quadrant scatterplot (js/scatterplot.js) -->
+    <h2 class="vis-title">Where did poverty fall, and where did more students finish school?</h2>
     <div id="vis-scatter"></div>
     <p class="vis-caption">Drag a box to select countries, or click a point. Shift + Click adds to the selection. Numbered labels mark notable countries and outliers. Hollow rings mark trends fit to only 3 surveys. Click either of those two legend entries above to show only the matching countries.</p>
 
     <!-- V2: choropleth world map (js/map.js) -->
+    <h2 class="vis-title">Where these countries are</h2>
     <div id="vis-map"></div>
     <p class="vis-caption">Countries are filled with the group color from the scatterplot above. Gray means no trend is available. Hatching marks trends fit to only 3 surveys, and numbered markers match the labels in the scatterplot. Scroll or click the +/- buttons to zoom, drag to pan.</p>
 
     <!-- V3: trajectory panel (js/trajectoryPanel.js) -->
+    <h2 class="vis-title">How the selected countries changed over time</h2>
     <div id="vis-trajectory"></div>
     <p class="vis-caption">Survey points and least-squares trend lines for the selected countries. Hover a point for details.</p>
+
+    <!-- I10: "Where do you fit" personalization (js/visualization.js) -->
+    <section class="fit-panel" aria-labelledby="fit-heading">
+      <h2 class="vis-title" id="fit-heading">Where does your country fit?</h2>
+      <p class="vis-note">Pick the country you are from, live in, or care about. It is selected in every view above, and this panel shows how its progress compares with other countries and with its sub-region, plus organizations working on these goals.</p>
+      <label for="fit-country">Country
+        <select id="fit-country"><option value="">Choose a country</option></select>
+      </label>
+      <div id="fit-result" class="fit-empty" aria-live="polite"></div>
+    </section>
 
   </div>
 
@@ -100,9 +127,58 @@
     <p><em>Final visualization screenshots (PNG images), design justifications, UI walk-through, and linked presentation slides.</em></p>
 
     <h1>Data Analysis</h1>
-    <p><em>Summary of data, data types, and data preprocessing.</em></p>
 
-    <p><em>Expectation: Data sources match the problem statement and are appropriate. These descriptions should be very explicit so someone could read your page and properly reproduce your results.</em></p>
+    <h2>Data Sources</h2>
+
+    <p>All indicator data comes from the <a href="https://unstats.un.org/sdgs/dataportal">UN SDG Global Database</a>, run by the UN Statistics Division. We exported the full data for Goal 1 (No Poverty) and Goal 4 (Quality Education) as <code>Goal1-data.csv</code> and <code>Goal4-data.csv</code>, together with <code>CodeDescriptions.csv</code>, which decodes the dimension codes in those files. From the two goals we use one series each, which together answer our question of whether falling poverty and rising school completion happen in the same countries:</p>
+
+    <table class="feedback-table">
+      <thead>
+        <tr><th>Indicator</th><th>Series code and filters</th><th>Meaning</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1.1.1 Extreme poverty</td>
+          <td><code>SI_POV_DAY1</code>, Location = all areas, Age = all ages, Sex = both sexes</td>
+          <td>Percent of the population living below the international poverty line</td>
+        </tr>
+        <tr>
+          <td>4.1.2 Completion rate</td>
+          <td><code>SE_TOT_CPLR</code>, Education level = upper secondary, Location = all areas, Quantile = total, Sex = both sexes</td>
+          <td>Percent of young people a few years above the graduation age who finished upper-secondary school</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>Two more sources support the views. Country boundaries are Natural Earth 1:50m (see Acknowledgments). Region and sub-region names for the region filter come from the UN M49 standard area codes, through the <a href="https://github.com/lukes/ISO-3166-Countries-with-Regional-Codes">ISO-3166-Countries-with-Regional-Codes</a> table.</p>
+
+    <h2>Data Types</h2>
+
+    <ul>
+      <li><strong>Country</strong> (categorical key): the 3-digit UN M49 code, zero-padded (for example <code>004</code> for Afghanistan). The same code is the ISO 3166-1 numeric code, so it joins the SDG data, the map boundaries, and the region table without matching names.</li>
+      <li><strong>Year</strong> (ordinal, temporal): the survey year, 2000 to 2025.</li>
+      <li><strong>Poverty rate and completion rate</strong> (quantitative, 0 to 100%): one value per country per survey year. Surveys are irregular: a country may have one survey a year or one a decade.</li>
+      <li><strong>Trend slopes</strong> (quantitative, diverging around 0): derived, in percentage points per year. Poverty is stored as <em>poverty removed</em> per year, so on both axes a positive value means improvement.</li>
+      <li><strong>Survey count</strong> (quantitative): how many surveys each slope rests on. Derived from it, the <strong>3-survey flag</strong> (binary) marks slopes fit to the minimum number of points.</li>
+      <li><strong>Group</strong> (categorical, 4 values): derived in the browser from the two slopes and the two threshold sliders, so it changes as the user moves them.</li>
+      <li><strong>Region and sub-region</strong> (categorical, hierarchical): 5 M49 regions, split into sub-regions.</li>
+    </ul>
+
+    <h2>Preprocessing</h2>
+
+    <p>Preprocessing is done with three Python scripts in <code>scripts/</code> (pandas and NumPy). The README gives the exact commands.</p>
+
+    <ol>
+      <li><strong><code>build.py</code></strong> stacks the Goal 1 and Goal 4 exports into one long table and decodes every dimension code with <code>CodeDescriptions.csv</code> (it also fixes one wrong description in that file, the age code <code>&lt;7Y</code>). The database mixes countries with regional aggregates such as "Sub-Saharan Africa," so a geographic area whose only <em>Nature</em> code is <code>N</code> is labeled an aggregate and dropped. It then picks each series with the filters in the table above, asserts there is at most one value per country and year, and pivots to a country by year table. For each country it fits a least-squares line (<code>np.polyfit</code>, degree 1) to the survey points of each indicator, and only when there are at least 3 points across at least 2 different years. The slope of that line is the country's trend.</li>
+      <li><strong><code>export_json.py</code></strong> writes the slopes, survey spans, survey counts, and the raw survey points into one small file, <code>data/sdg.json</code>, and flips the sign of the poverty slope so that positive means poverty fell. Group membership is not computed here, because it depends on the sliders.</li>
+      <li><strong><code>build_map.py</code></strong> joins simplified Natural Earth boundaries to the SDG data by M49 code and writes <code>data/world.geojson</code>. <strong><code>build_regions.py</code></strong> writes <code>data/regions.csv</code>, the M49 region and sub-region of each country. It uses the M49 intermediate region where there is one, so the two largest sub-regions, Sub-Saharan Africa and Latin America and the Caribbean, are split into smaller groups like Western Africa and South America. Kosovo is in the SDG data but has no ISO code, so it is added by hand under Southern Europe.</li>
+    </ol>
+
+    <h2>What the Data Covers</h2>
+
+    <p>After preprocessing, <code>data/sdg.json</code> holds 196 countries with 1,845 poverty survey points and 1,244 completion survey points. 141 countries have a poverty trend, 130 have a completion trend, and <strong>116 have both</strong>. Only those 116 can be placed on the scatterplot and colored on the map; the other 80 are gray. Of the 116, 22 have at least one trend fit to only 3 surveys, which we flag in every view.</p>
+
+    <p>Coverage is uneven, and this shapes what the visualization can say. The 116 countries are 38 in Africa, 33 in Europe, 24 in Asia, 20 in the Americas, and only 1 in Oceania (Australia), so the page says little about the Pacific. Many high-income countries have extreme poverty near 0% in every survey, so their poverty trend is close to zero: they can fall into "completion improved only" or "neither improved much" because there was no extreme poverty left to remove, not because they did badly. The trajectory panel shows the actual rates so users can tell these cases apart. Finally, a linear trend is a summary. It shows a country's average direction since 2000, but not a sudden change such as the effect of COVID-19 on school completion after 2020.</p>
 
     <h1>Task Analysis</h1>
 
