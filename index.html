@@ -189,9 +189,39 @@
 
     <h1>Task Analysis</h1>
 
-    <p><em>Summary of task table.</em></p>
+     <p>Following the Design Study "Lite" methodology, we began our task analysis with a mock interview with Groups 6, 7 and 8. From that conversation and our motivating questions, we identified what our users need to do with the data, translated those needs into domain tasks, and ranked them by importance. We then classified each task using Munzner's abstract task typology so that every design decision could be traced back to a specific user need.</p>
 
-    <p><em>Expectation: Clearly describes domain tasks, processes, goals and abstract tasks for domain problems.</em></p>
+    <h2>Goals</h2>
+
+    <p>Our users range from students and teachers studying UN initiatives to UN staff, diplomats, and nonprofit managers deciding where to direct attention and funding. Although their expertise differs, they share one goal: to understand whether progress on Goal 1 (No Poverty) and Goal 4 (Quality Education) is happening together, and where it is not. Because the UN reports the two goals separately, answering this requires comparing two trends at once for more than 100 countries, which is not possible from the raw tables alone. Since we assume users already know what each goal is, our tasks focus on comparing progress rather than defining the goals.</p>
+
+    <h2>Task Table</h2>
+
+    <table class="feedback-table">
+      <thead>
+        <tr><th>Domain Task (ranked)</th><th>Query (Low)</th><th>Search (Mid)</th><th>Analyze (High)</th><th>Supported by</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1. Which countries are reducing extreme poverty and raising upper-secondary completion at the same time?</td><td>Summarize</td><td>Explore</td><td>Discover</td><td>Scatterplot groups, map</td></tr>
+        <tr><td>2. Which countries are making progress on only one of the two goals?</td><td>Identify</td><td>Explore</td><td>Discover</td><td>Scatterplot groups, map, box selection</td></tr>
+        <tr><td>3. Is each country's current pace fast enough to count as meaningful progress before 2030?</td><td>Summarize</td><td>Explore</td><td>Derive</td><td>Trend slopes, threshold sliders</td></tr>
+        <tr><td>4. Where do these patterns occur, and do they differ across regions?</td><td>Compare</td><td>Browse</td><td>Discover</td><td>Map, region and sub-region filters</td></tr>
+        <tr><td>5. How have a specific country's poverty and completion rates actually changed across surveys?</td><td>Identify</td><td>Lookup</td><td>Present</td><td>Trajectory panel</td></tr>
+        <tr><td>6. Where does my country fit compared with its sub-region and the world, and who is working on these goals?</td><td>Compare</td><td>Lookup</td><td>Present</td><td>Country panel</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Abstract Tasks</h2>
+
+    <p>Munzner's typology describes each task at three levels. The analyze level explains why the user is there: to <em>discover</em> new patterns, to <em>present</em> information they already know, or to <em>derive</em> new data from existing data, such as our yearly trend slopes. The search level describes what the user already knows. In a <em>lookup</em>, they know both the target and its location; in <em>locate</em>, only the target; in <em>browse</em>, only the location; and in <em>explore</em>, neither. The query level describes how many targets are involved: one (<em>identify</em>), several (<em>compare</em>), or all of them (<em>summarize</em>).</p>
+
+    <h2>Ranking Rationale</h2>
+
+    <p>Tasks 1–3 rank highest because they directly answer our motivating questions. They are exploratory: users usually begin without a particular country in mind and need to see every country at once to find where the goals move together and where they diverge. Task 3 is a derive task because the raw data contains only survey values, so we calculated each country's yearly rate of change and let users set the threshold for meaningful progress. We do not project values to 2030, since a linear projection from a few surveys would suggest more certainty than the data supports. Tasks 4–6 serve users who already have a region or country in mind, such as a diplomat or a nonprofit manager focused on one area. Early in the project we also considered tasks about gender gaps (indicator 4.5) and rural versus urban poverty (indicator 1.2), but we dropped them because our project focuses on whether progress on Goal 1 and Goal 4 is correlated at the country level. Breaking each country down by gender or location would have shifted the focus from the relationship between the two goals to inequalities within a single goal, which is a different question.</p>
+
+    <h2>Process</h2>
+
+    <p>The ranking shaped how users move through the tool, following Shneiderman's mantra of overview first, zoom and filter, then details on demand. The scatterplot and world map provide the overview for Tasks 1–3. The threshold sliders and region filters let users zoom and filter for Tasks 3 and 4. Brushing and linking connects the views, so countries selected in one view are highlighted in all of them, and the trajectory and country panels provide details on demand for Tasks 5 and 6. Because the exploratory tasks matter most, the two overview views take up the most space on the page.</p>
 
     <h1>Design Process</h1>
 
@@ -283,9 +313,15 @@
 
     <h1>Conclusion</h1>
 
-    <p><em>Short summary of work completed and areas for improvement/future-work.</em></p>
-    
-    <p><em>Expectation: Meaningfully wraps up project and has good future directions.</em></p>
+    <p>With the 2030 deadline for the Sustainable Development Goals approaching, we set out to assess whether progress on Goal 1: No Poverty and Goal 4: Quality Education is happening together. To do this, we built an interactive D3 visualization that places each country's yearly poverty trend against its yearly education trend for 116 countries between 2000 and 2025. A linked world map shows where each pattern occurs, a trajectory panel shows each country's actual survey data, and a country panel lets users position themselves within the data and find organizations working to close these gaps. Adjustable thresholds let each user decide what counts as meaningful progress rather than having us decide for them. Our main finding is that the two goals do not always move together. Some of the patterns that helped with this assessment include the choice of colors for representing the groups; and how it made the overall visualization more effective. This challenges the assumption we started with, that progress on poverty and education would be closely correlated, and shows why the two goals should be viewed side by side.</p>
+
+    <h2>Limitations</h2>
+
+    <p>Our visualization has several limitations. Only 116 of the 196 countries had enough surveys to calculate both trends, and some regions, such as Oceania, are barely represented. Many high-income countries already have near-zero extreme poverty, so their flat poverty trend reflects a floor effect rather than a lack of progress. A single linear trend also smooths over sudden changes such as the effects of COVID-19, and trends based on only three surveys are less reliable, which is why we mark them differently in both the scatterplot and the map. Finally, the tool shows whether the two trends are related, but it cannot explain why.</p>
+
+    <h2>Future Work</h2>
+
+    <p>In future iterations, we would add gender and rural versus urban breakdowns as a second layer, so users could see who within a country benefits from progress on both goals. We would also use trend models that can capture sudden changes. We would also like to add 2030 projections that clearly communicate their uncertainty, and bring in explanatory data such as education spending to help users understand the patterns they discover. Lastly, we would test the tool with the users we designed it for, including UN staff and nonprofit managers, to confirm that it supports the decisions they actually make.</p>
 
     
     <h1>Acknowledgments</h1>
