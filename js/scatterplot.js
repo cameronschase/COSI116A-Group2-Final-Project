@@ -25,7 +25,9 @@
  *
  * Events sent on the dispatcher:
  *   "select" (ids, source)                  ids are M49 codes, source = "scatter"  (I1)
- *   "hover"  (event, country, source) country is null on pointer out         (I3)
+ *   "hover"  (event, country, source, info) country is null on pointer out         (I3)
+ *            info = {name, m49, povertyReduction, completionGain, group,
+ *                    povertyYears, completionYears, povertyN, completionN}
  *            On keyboard focus, event is {pageX, pageY} beside the point.
  */
 function quadrantScatter() {
@@ -358,9 +360,17 @@ function quadrantScatter() {
     return [lo - slack, hi + slack];
   }
 
-  // I3: pointer and keyboard hover share one path.
+  // I3: everything the tooltip needs, so it never recomputes the group.
   function hover(event, d) {
-    if (dispatcher) dispatcher.call("hover", null, event, d, "scatter");
+    if (!dispatcher) return;
+    const info = d && {
+      name: d.name, m49: d.m49,
+      povertyReduction: d.povertyReduction, completionGain: d.completionGain,
+      group: SDG.groupOf(d, thresholds.poverty, thresholds.completion),
+      povertyYears: d.povertyYears, completionYears: d.completionYears,
+      povertyN: d.povertyN, completionN: d.completionN,
+    };
+    dispatcher.call("hover", null, event, d, "scatter", info);
   }
 
   function emit(ids) {
