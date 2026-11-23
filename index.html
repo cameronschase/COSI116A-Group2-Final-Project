@@ -131,7 +131,83 @@
 
     <h1>Visualization explanation</h1>
     
-    <p><em>Final visualization screenshots (PNG images), design justifications, UI walk-through, and linked presentation slides.</em></p>
+    <p>Our visualization has three linked views that answer one question in stages: which countries reduced extreme poverty without raising upper-secondary completion, where those countries are, and how much survey data supports each trend. This section shows each view and interaction, then walks through one way to use them together. The reasoning behind our encoding and layout choices is in the Design Process section below.</p>
+
+    <h2>Overview</h2>
+
+    <figure>
+      <img src="images/Overview.png" alt="The legend, threshold sliders and region menus above the quadrant scatterplot and the world map, with no countries selected.">
+      <figcaption>The default view: thresholds at +1 pp/yr, no selection.</figcaption>
+    </figure>
+
+    <p>The page opens on the scatterplot and the map. Each point in the scatterplot is a country, placed by how fast its extreme poverty rate fell (x-axis) and how fast its upper-secondary completion rate rose (y-axis), both in percentage points per year. The dashed threshold lines divide the plot into four groups, and each country takes its group's color in both the scatterplot and the map. The scatterplot shows 116 countries. Another 80 are gray on the map because they lack the three surveys needed to fit a trend. At the default thresholds, 21 countries fall in "Poverty fell, completion stalled," the group our motivating question asks about.</p>
+
+    <h2>Brushing and Linking</h2>
+
+    <figure>
+      <img src="images/Brushing & Linking.png" alt="A selection box drawn over the lower-right quadrant of the scatterplot, with the same countries outlined on the world map.">
+      <figcaption>Brushing the "Poverty fell, completion stalled" quadrant highlights the same countries on the map.</figcaption>
+    </figure>
+
+    <p>Dragging a box on the scatterplot selects every country inside it, and the map outlines the same countries while fading the rest. Selection works in the other direction too: clicking a country on the map highlights its point in the scatterplot. Brushing the lower-right quadrant shows that 16 of these 21 countries are in Africa, most of which are in Western Africa. That pattern is hard to see from the scatterplot alone.</p>
+
+    <h2>Trajectory Panel</h2>
+
+    <figure>
+      <img src="images/Trajectory Panel.png" alt="Two stacked line charts of extreme poverty rate and upper-secondary completion rate by year for [COUNTRIES], with survey points, solid lines between surveys and dashed least-squares trend lines.">
+      <figcaption>Survey history for [COUNTRIES]. Solid lines connect measured surveys, and dashed lines are the least-squares trends that place each country in the scatterplot.</figcaption>
+    </figure>
+
+    <p>The trajectory panel fills in when countries are selected. Each selected country appears in both charts, which share one year axis so the two indicators line up in time. This panel shows the data behind each point in the scatterplot. A viewer can see whether a trend rests on many evenly spaced surveys or on a few points far apart. The three selected countries, Canada, USA, and Mexico show many interesting trends. Notably, Canada and USA have very high upper-secondary completion rates and very low levels of extreme poverty. Due to the lack of change in the data over many years for the USA, it is highlight in pink. Meixco however is noticeably trending in the right direction for upper-secondary education, but trending negatively for extreme poverty.</p>
+
+    <h2>Details on Demand</h2>
+
+    <figure>
+      <img src="images/Tooltip.png" alt="A tooltip over a scatterplot point for [COUNTRY] listing its group, both slopes, the year span of each trend and the number of surveys behind each.">
+      <figcaption>Hovering a point shows its group, both slopes, the years each trend covers and how many surveys each uses.</figcaption>
+    </figure>
+
+    <p>Hovering any country in the scatterplot, the map or the trajectory panel opens a tooltip with that country's values, so the views themselves stay uncluttered. The survey count matters most for countries drawn as hollow rings, whose trends are fit to only three surveys. Liberia is one of these, so its position in the plot should be read with more caution than a country with a long survey record.</p>
+
+    <h2>Adjusting the Thresholds</h2>
+
+    <div style="display: flex; gap: 1em;">
+      <figure style="flex: 1;">
+        <img src="images/Threshold 1.png" alt="Scatterplot and map with the completion threshold at [VALUE A] pp/yr.">
+        <figcaption>Completion threshold at 1 pp/yr.</figcaption>
+      </figure>
+      <figure style="flex: 1;">
+        <img src="images/Threshold 2.png" alt="Scatterplot and map with the completion threshold at [VALUE B] pp/yr, with more countries in the lower groups.">
+        <figcaption>Completion threshold at 2 pp/yr.</figcaption>
+      </figure>
+    </div>
+
+    <p>What counts as meaningful progress depends on the viewer, so the thresholds are adjustable. Moving a slider moves its dashed line in the scatterplot and recolors every country in both views as it crosses the line. It's clear that as the thresholds rise, an increasing number of countries are grouped with "neither improved much" and fewer countries show improvement on either axis.</p>
+
+    <h2>Where Does Your Country Fit?</h2>
+
+    <figure>
+      <img src="images/Fit Panel.png" alt="The Where does your country fit panel with [COUNTRY] chosen, comparing its progress with other countries and its sub-region and listing organizations working on these goals.">
+      <figcaption>The personalization panel with Paraguay selected.</figcaption>
+    </figure>
+
+    <p>Choosing a country in this panel selects it in every view above and compares its progress with other countries and with its sub-region. The panel also lists organizations working on these goals, so a viewer who finds a gap in their own country or region has a place to start.</p>
+
+    <h2>Walkthrough</h2>
+
+    <p>One way to use the visualization from start to finish:</p>
+    <ol>
+      <li>Start at the overview. The legend explains the four group colors, the gray used for countries without a trend, and the markers for three-survey trends and numbered outliers. You can also filter by region and sub-region.</li>
+      <li>Set the two thresholds to the yearly improvement you consider meaningful. The dashed lines and colors update as the sliders move.</li>
+      <li>Drag a box over the lower-right quadrant to select the countries where poverty fell but completion stalled. The map shows where they are.</li>
+      <li>Read the trajectory panel to see the surveys behind each selected country's trends.</li>
+      <li>Hover any country for its exact slopes, year spans and survey counts. Treat hollow rings and hatched countries with more caution.</li>
+      <li>Use the region and sub-region menus, or click a legend entry, to narrow the view.</li>
+      <li>Choose a country in "Where does your country fit?" to compare it with its sub-region.</li>
+      <li>Press Reset to clear the selection and start over.</li>
+    </ol>
+
+    <p>Our presentation slides are available <a href="https://docs.google.com/presentation/d/1Ao6XYbTdlYcj5qVk5BDTyFojAXTyTDzl-rzFTcpKFjw/edit?usp=sharing">here</a>.</p>
 
     <h1>Data Analysis</h1>
 
@@ -325,9 +401,7 @@
 
     
     <h1>Acknowledgments</h1>
-
-    <p><em>List here where any code, packages/libraries, text, images, designs, slides, etc. that you leverage come from. Include any use of LLMs and AIs.</em></p>
-    
+        
     <ul>
       <li><a href="https://d3js.org/">D3: Data-Driven Documents</a> by Mike Bostock.</li>
       <li>Country boundaries: <a href="https://www.naturalearthdata.com/">Natural Earth</a> 1:50m (public domain), via the <a href="https://github.com/topojson/world-atlas">world-atlas</a> package (ISC license), simplified with <a href="https://github.com/mbloch/mapshaper">mapshaper</a>.</li>
