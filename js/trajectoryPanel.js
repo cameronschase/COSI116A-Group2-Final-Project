@@ -28,22 +28,22 @@
  *
  * Usage:
  *   const panel = trajectoryPanel().colorOf(c => COLORS[c.group]);
- *   d3.select("#trajectory").call(panel);
+ *   d3.select("#vis-trajectory").call(panel);
  *   panel.update(selectedCountries);   // call whenever the selection changes
  *   panel.on("hover", id => { ... });  // id or null; for reverse linking (I7)
  */
 function trajectoryPanel() {
   // ---- configurable (fixed size: nothing resizes while interacting) ----
-  let width = 640;
-  let height = 460;
-  const margin = { top: 30, right: 20, bottom: 44, left: 58 };
-  const gap = 38;                       // space between the two panels
+  let width = 960;                      // same viewBox width as the map; css scales it to the holder
+  let height = 620;
+  const margin = { top: 34, right: 24, bottom: 48, left: 70 };
+  const gap = 48;                       // space between the two panels
   let colorOf = () => "#4c78a8";        // swap in the shared palette (P3)
-  let xDomain = [1990, 2024];           // fixed so the axis never jumps
+  let xDomain = [2000, 2025];           // survey years in sdg.json; fixed so the axis never jumps
   const dispatcher = d3.dispatch("hover");
 
   // ---- internal refs ----
-  let svg, gRoot, gPanels, guide, overlay, emptyMsg, tip;
+  let svg, gRoot, gPanels, guide, overlay, tip;
   let panels;                           // [{key, title, yLabel, y, top, h}]
   let x;                                // shared x scale
   let selected = [];
@@ -64,6 +64,19 @@ function trajectoryPanel() {
     return { slope: b, intercept: my - b * mx };
   }
 
+  // Upper bound of the y axis for one indicator, given the current selection.
+  function yMax(key) {
+    let hi = 0;
+    selected.forEach(c => {
+      (c[key] || []).forEach(p => { if (p.value != null) hi = Math.max(hi, p.value); });
+      const f = c._fit[key];
+      if (f) spanOf(c[key]).forEach(yr => { hi = Math.max(hi, f.intercept + f.slope * yr); });
+    });
+    if (!selected.length) return 100;                       // nothing selected: full 0-100% scale
+    const top = d3.scaleLinear().domain([0, Math.max(hi, 1) * 1.05]).nice(5).domain()[1];
+    return Math.min(100, top);
+  }
+
   // Year span of a series, as [first, last] for SDG.fmtYears.
   const spanOf = pts => (pts && pts.length)
     ? [d3.min(pts, p => p.year), d3.max(pts, p => p.year)] : [null, null];
@@ -72,8 +85,10 @@ function trajectoryPanel() {
     // Build the static skeleton once.
     svg = selection.append("svg")
       .attr("class", "trajectory-panel")
-      .attr("width", width).attr("height", height)
-      .attr("viewBox", `0 0 ${width} ${height}`);
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("preserveAspectRatio", "xMidYMid meet")
+      .attr("role", "img")
+      .attr("aria-label", "Extreme poverty and upper-secondary completion over time for the selected countries");
 
     gRoot = svg.append("g");
     const innerW = width - margin.left - margin.right;
@@ -97,30 +112,31 @@ function trajectoryPanel() {
       .attr("width", innerW).attr("height", d => d.h)
       .attr("fill", "none").attr("stroke", "#ccc");
     gPanels.append("text").attr("x", margin.left).attr("y", d => d.top - 8)
-      .attr("font-size", 12).attr("font-weight", "bold").text(d => d.title);
+      .attr("font-size", 14).attr("font-weight", "bold").text(d => d.title);
     gPanels.append("text").attr("class", "y-label")
-      .attr("transform", d => `translate(14,${d.top + d.h / 2}) rotate(-90)`)
-      .attr("text-anchor", "middle").attr("font-size", 11).attr("fill", "#555")
+      .attr("transform", d => `translate(16,${d.top + d.h / 2}) rotate(-90)`)
+      .attr("text-anchor", "middle").attr("font-size", 12).attr("fill", "#555")
       .text(d => d.yLabel);
     gPanels.append("g").attr("class", "y-axis")
       .attr("transform", `translate(${margin.left},0)`);
-    gPanels.append("g").attr("class", "series");
+    gPanels.append("clipPath").attr("id", d => "traj-clip-" + d.key)
+      .append("rect").attr("x", margin.left - 5).attr("y", d => d.top - 5)
+      .attr("width", innerW + 10).attr("height", d => d.h + 10);
+    gPanels.append("g").attr("class", "series").attr("clip-path", d => `url(#traj-clip-${d.key})`);
 
     // Shared x axis: drawn once, under the bottom panel only
     gRoot.append("g").attr("class", "x-axis")
       .attr("transform", `translate(0,${panels[1].top + panelH})`)
-      .call(d3.axisBottom(x).tickFormat(d3.format("d")).ticks(8));
+      .call(d3.axisBottom(x).tickFormat(d3.format("d"))
+        .tickValues(d3.range(xDomain[0], xDomain[1] + 1, 5)));
     gRoot.append("text").attr("x", margin.left + innerW / 2).attr("y", height - 8)
-      .attr("text-anchor", "middle").attr("font-size", 11).attr("fill", "#555")
+      .attr("text-anchor", "middle").attr("font-size", 12).attr("fill", "#555")
       .text("Year");
 
     // Hover guide + empty-state message
     guide = gRoot.append("line").attr("class", "guide")
       .attr("y1", margin.top).attr("y2", panels[1].top + panelH)
       .attr("stroke", "#888").attr("stroke-dasharray", "2,2").style("display", "none");
-    emptyMsg = gRoot.append("text").attr("x", margin.left + innerW / 2)
-      .attr("y", height / 2).attr("text-anchor", "middle").attr("font-size", 13)
-      .attr("fill", "#888").text("Brush the scatterplot or click countries on the map to see trajectories");
 
     // Tooltip (HTML div so it can overflow the SVG). Styled inline so it works
     // without touching style.css.
@@ -167,12 +183,11 @@ function trajectoryPanel() {
       });
     });
 
-    emptyMsg.style("display", selected.length ? "none" : null);
-
-    // Poverty y-domain adapts to the data; completion stays 0-100.
-    const maxPov = d3.max(selected, c => d3.max(c.poverty || [], p => p.value)) || 100;
-    panels[0].y.domain([0, Math.max(10, Math.ceil(maxPov / 10) * 10)]);
-    panels[1].y.domain([0, 100]);
+    // Both y axes auto-scale to the selection. The top of each axis covers every
+    // survey point and the end of every trend line (trends can run past the data),
+    // with a little headroom, rounded to a nice tick. Rates stay within 0-100%, and
+    // anything outside the frame is clipped rather than drawn over the labels.
+    panels.forEach(p => p.y.domain([0, yMax(p.key)]));
 
     gPanels.each(function (p) {
       const g = d3.select(this);
@@ -185,7 +200,7 @@ function trajectoryPanel() {
       const enter = groups.enter().append("g").attr("class", "country");
       enter.append("path").attr("class", "obs").attr("fill", "none").attr("stroke-width", 1.5);
       enter.append("path").attr("class", "trend").attr("fill", "none")
-        .attr("stroke-width", 2).attr("stroke-dasharray", "6,3");
+        .attr("stroke-width", 2.5).attr("stroke-dasharray", "7,4");
       const all = enter.merge(groups);
       all.attr("data-id", d => d.id);
 
@@ -220,12 +235,13 @@ function trajectoryPanel() {
   function onMove(ev) {
     if (!selected.length) return;
     const box = overlay.node().ownerSVGElement.getBoundingClientRect();
-    const mx = ev.clientX - box.left, my = ev.clientY - box.top;
+    const k = width / box.width;                       // css px -> viewBox units
+    const mx = (ev.clientX - box.left) * k, my = (ev.clientY - box.top) * k;
     const panel = panels.find(p => my >= p.top - gap / 2 && my <= p.top + p.h + gap / 2);
     if (!panel) return onLeave();
 
     // nearest survey point (in pixels) within the hovered panel
-    let best = null, bestD = 22;
+    let best = null, bestD = 22 * (width / 760);       // pick radius, scaled with the drawing
     selected.forEach(c => (c[panel.key] || []).forEach(q => {
       const d = Math.hypot(x(q.year) - mx, panel.y(q.value) - my);
       if (d < bestD) { bestD = d; best = { c, q }; }
@@ -243,8 +259,12 @@ function trajectoryPanel() {
       `${best.q.year}: <b>${best.q.value.toFixed(1)}</b> ${unit}<br>` +
       `Poverty removed: ${SDG.labelSlope(c._trend.povertyRemoved)} <span style="color:#666">(${SDG.fmtYears(c._span.poverty)})</span><br>` +
       `Completion gained: ${SDG.labelSlope(c._trend.completionGained)} <span style="color:#666">(${SDG.fmtYears(c._span.completion)})</span>`
-    ).style("display", "block")
-      .style("left", (ev.pageX + 14) + "px").style("top", (ev.pageY + 14) + "px");
+    ).style("display", "block");
+    // Keep the tooltip on screen: flip it to the left of the pointer near the right edge.
+    const tw = tip.node().offsetWidth;
+    const left = ev.pageX + 14 + tw > window.scrollX + document.documentElement.clientWidth
+      ? ev.pageX - tw - 14 : ev.pageX + 14;
+    tip.style("left", left + "px").style("top", (ev.pageY + 14) + "px");
 
     dispatcher.call("hover", chart, c.id);
   }
