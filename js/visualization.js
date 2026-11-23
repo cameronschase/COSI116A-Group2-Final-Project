@@ -89,6 +89,10 @@
     }
     const legend = sdgLegend().dispatcher(dispatch);
     d3.select("#vis-legend").call(legend);
+    // I4: legend counts follow the thresholds (null = no trend).
+    const updateCounts = () => legend.counts(
+      d3.rollup(sdg.countries, v => v.length, c => groupOf(c.m49)));
+    updateCounts();
     dispatch.on("legend.app", ({ hidden, focused }) => {
       legendHidden = hidden;
       legendFocused = focused;
@@ -295,6 +299,7 @@
           out.text(SDG.fmtSlope(thresholds[key]));
           scatter.thresholds({ [key]: thresholds[key] });
           map.recolor();
+          updateCounts();
           applyLegend();        // a country can change group, so re-check what is dimmed
           updateTrajectory();   // groups, and so line colors, depend on thresholds
         });
