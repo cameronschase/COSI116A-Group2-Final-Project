@@ -52,8 +52,10 @@ const SDG = (() => {
   const colorScale = () => d3.scaleOrdinal().domain(GROUPS).range(GROUPS.map(g => PALETTE[g]));
 
   // ---- Thresholds (I4 sliders move these) ----
-  // Zero is the meaningful default: at or above zero the indicator improved.
-  const DEFAULT_THRESHOLDS = { poverty: 0, completion: 0 };
+  // +1 pp/yr, as in the Tableau prototype: a country counts as improving only
+  // when it gains at least one percentage point a year. Zero would count any
+  // tiny positive drift as improvement.
+  const DEFAULT_THRESHOLDS = { poverty: 1, completion: 1 };
   const THRESHOLD_RANGE = {
     // Wide enough that each extreme puts every country on one side: the
     // poverty slopes in sdg.json run from -1.64 to +4.15 pp/yr.
