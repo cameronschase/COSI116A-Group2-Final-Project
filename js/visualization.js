@@ -138,11 +138,18 @@
     });
     fillSubregions();
 
-    // I5: reset. Also clears the region filter (I9) and the "Where do you
-    // fit" panel (I10).
+    // I5: reset. Clears the selection in every view, zooms the map out,
+    // returns both sliders to the P3 defaults, shows every legend group, and
+    // clears the region filter (I9) and the "Where do you fit" panel (I10).
     d3.select("#reset-selection").on("click", () => {
       scatter.clear();
       if (map.resetZoom) map.resetZoom();
+      for (const key of ["poverty", "completion"]) {
+        d3.select(`#thr-${key}`)
+          .property("value", SDG.DEFAULT_THRESHOLDS[key])
+          .dispatch("input");   // same path as dragging, so every view follows
+      }
+      legend.reset();
       if (regionFilter.region) {
         regionFilter = { region: "", subregion: "" };
         regionSel.property("value", "");
