@@ -36,7 +36,7 @@ function worldMap() {
   let dispatcher = null;
   let annotations = [];   // from SDG.notableCountries; drawn as numbered markers
   let isThin = () => false;
-  const NO_DATA = "#d9d9d9";
+  const NO_DATA = SDG.NO_DATA;   // shared gray from js/constants.js (P3)
 
   // ---- Internal state ----
   let countries;          // country <path> selection

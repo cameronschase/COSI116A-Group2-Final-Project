@@ -38,7 +38,7 @@ function trajectoryPanel() {
   let height = 620;
   const margin = { top: 34, right: 24, bottom: 48, left: 70 };
   const gap = 48;                       // space between the two panels
-  let colorOf = () => "#4c78a8";        // swap in the shared palette (P3)
+  let colorOf = c => SDG.color(c.group); // shared palette (P3, js/constants.js)
   let xDomain = [2000, 2025];           // survey years in sdg.json; fixed so the axis never jumps
   const dispatcher = d3.dispatch("hover");
 

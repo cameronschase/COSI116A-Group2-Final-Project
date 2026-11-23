@@ -19,15 +19,21 @@
  *   scatter.syncOverlays();                               // after the I6 legend dims a group
  *   scatter.clear();                                      // I5 reset button
  *
+ * Keyboard: Tab reaches one point at a time (roving tabindex). Arrow keys move
+ * between countries in order of poverty trend, Home/End jump to the ends,
+ * Enter or Space selects (Shift adds), Escape clears the selection.
+ *
  * Events sent on the dispatcher:
- *   "select" (ids, source)            ids are M49 codes, source = "scatter"  (I1)
+ *   "select" (ids, source)                  ids are M49 codes, source = "scatter"  (I1)
  *   "hover"  (event, country, source) country is null on pointer out         (I3)
+ *            On keyboard focus, event is {pageX, pageY} beside the point.
  */
 function quadrantScatter() {
   // ---- Settings ----
   let width = 760;
   let height = 540;
-  let margin = { top: 28, right: 24, bottom: 64, left: 76 };
+  let margin = { top: 44, right: 24, bottom: 64, left: 76 };
+  let title = "Yearly trend per country: poverty removed against completion gained";
   let thresholds = { ...SDG.DEFAULT_THRESHOLDS };
   let dispatcher = null;
   let radius = 5;
@@ -45,10 +51,13 @@ function quadrantScatter() {
   let missing = 0;     // countries dropped for a missing trend (feeds V6)
   let selected = new Set();
   let clearBrush = null;   // set once the brush exists
+  let focusRing;           // drawn around the keyboard-focused point
 
   function chart(selection) {
     selection.each(function (countries) {
-      rows = countries.filter(c => c.povertyReduction != null && c.completionGain != null);
+      rows = countries.filter(c => c.povertyReduction != null && c.completionGain != null)
+        // Keyboard order: left to right, then bottom to top.
+        .sort((a, b) => a.povertyReduction - b.povertyReduction || a.completionGain - b.completionGain);
       missing = countries.length - rows.length;
 
       const innerW = width - margin.left - margin.right;
@@ -58,17 +67,30 @@ function quadrantScatter() {
         .attr("class", "quadrant-scatter")
         .attr("viewBox", `0 0 ${width} ${height}`)
         .attr("preserveAspectRatio", "xMidYMid meet")
-        .attr("role", "img")
-        .attr("aria-label", "Scatterplot of yearly poverty reduction against yearly gain in upper-secondary completion, one point per country");
+        // "group" rather than "img", so the focusable points stay exposed to
+        // screen readers.
+        .attr("role", "group")
+        .attr("aria-label", "Scatterplot of yearly poverty reduction against yearly gain in upper-secondary completion, one point per country")
+        .on("keydown", event => {
+          if (event.key === "Escape") { event.preventDefault(); chart.clear(); }
+        });
+
+      // V5: chart title.
+      svg.append("text").attr("class", "chart-title")
+        .attr("x", margin.left).attr("y", 18)
+        .attr("fill", SDG.INK)
+        .text(title);
 
       const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
       // Scales, padded so no country sits on the frame.
+      // Thresholds sit inside the domain too, so a dashed line is never off the plot.
+      const R = SDG.THRESHOLD_RANGE;
       x = d3.scaleLinear()
-        .domain(pad(d3.extent(rows, d => d.povertyReduction)))
+        .domain(d3.extent([...pad(d3.extent(rows, d => d.povertyReduction)), R.poverty.min, R.poverty.max]))
         .nice().range([0, innerW]);
       y = d3.scaleLinear()
-        .domain(pad(d3.extent(rows, d => d.completionGain)))
+        .domain(d3.extent([...pad(d3.extent(rows, d => d.completionGain)), R.completion.min, R.completion.max]))
         .nice().range([innerH, 0]);
 
       // Recessive grid behind everything.
@@ -147,22 +169,64 @@ function quadrantScatter() {
         .attr("cx", d => x(d.povertyReduction))
         .attr("cy", d => y(d.completionGain))
         .classed("thin-evidence", SDG.isThinEvidence)   // drawn as a ring (style.css)
+        .attr("role", "button")
+        .attr("tabindex", (d, i) => (i === 0 ? 0 : -1))
+        .attr("aria-label", d => `${d.name}: poverty removed ${SDG.labelSlope(d.povertyReduction)}, `
+          + `completion gained ${SDG.labelSlope(d.completionGain)}`)
         .on("mouseover", function (event, d) {
           d3.select(this).raise().classed("hovered", true);
-          if (dispatcher) dispatcher.call("hover", null, event, d, "scatter");
+          hover(event, d);
         })
-        .on("mousemove", (event, d) => {
-          if (dispatcher) dispatcher.call("hover", null, event, d, "scatter");
-        })
+        .on("mousemove", (event, d) => hover(event, d))
         .on("mouseout", function (event) {
           d3.select(this).classed("hovered", false);
-          if (dispatcher) dispatcher.call("hover", null, event, null, "scatter");
+          hover(event, null);
         })
-        .on("click", (event, d) => clickSelect(event, d.m49));
+        .on("click", (event, d) => clickSelect(event, d.m49))
+        .on("focus", function (event, d) {
+          points.attr("tabindex", -1);
+          d3.select(this).attr("tabindex", 0);
+          if (!this.matches(":focus-visible")) return;   // mouse focus: no ring
+          focusRing.attr("cx", x(d.povertyReduction)).attr("cy", y(d.completionGain))
+            .style("display", null);
+          const r = this.getBoundingClientRect();
+          hover({ pageX: r.right + window.scrollX, pageY: r.top + window.scrollY }, d);
+        })
+        .on("blur", () => {
+          focusRing.style("display", "none");
+          hover(null, null);
+        })
+        .on("keydown", function (event, d) {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            clickSelect(event, d.m49);
+            this.focus();   // highlight() raises selected points, which drops focus
+            return;
+          }
+          const order = points.filter(":not(.group-hidden)").nodes()
+            .sort((a, b) => rows.indexOf(d3.select(a).datum()) - rows.indexOf(d3.select(b).datum()));
+          const i = order.indexOf(this);
+          const next = {
+            ArrowRight: order[i + 1], ArrowUp: order[i + 1],
+            ArrowLeft: order[i - 1], ArrowDown: order[i - 1],
+            Home: order[0], End: order[order.length - 1],
+          }[event.key];
+          if (event.key in { ArrowRight: 1, ArrowUp: 1, ArrowLeft: 1, ArrowDown: 1, Home: 1, End: 1 }) {
+            event.preventDefault();
+            if (next) next.focus();
+          }
+        });
 
-      points.append("title").text(d => d.name);  // keyboard and screen-reader fallback
+      points.append("title").text(d => d.name);  // pointer fallback
 
       drawAnnotations(g.append("g").attr("class", "annotations"), innerW, innerH, g);
+
+      // Visible focus ring, on top of points and labels.
+      focusRing = g.append("circle").attr("class", "focus-ring")
+        .attr("r", radius + 4)
+        .attr("fill", "none")
+        .attr("stroke", SDG.INK)
+        .style("display", "none");
 
       // V6: how many countries the selection cannot show.
       noTrendNote = svg.append("text")
@@ -212,8 +276,8 @@ function quadrantScatter() {
       .data(list, a => a.m49)
       .join("g")
       .attr("class", "annotation")
-      .attr("role", "button")
-      .attr("aria-label", a => `Notable country ${a.rank}: ${a.name}`);
+      // Pointer shortcut only: the same country is reachable as a focusable point.
+      .attr("aria-hidden", "true");
 
     labels.append("line").attr("class", "annotation-leader");
     labels.append("circle").attr("class", "annotation-badge").attr("r", BADGE);
@@ -278,21 +342,25 @@ function quadrantScatter() {
     labels
       .on("mouseover", (event, a) => {
         points.filter(d => d.m49 === a.m49).raise().classed("hovered", true);
-        if (dispatcher) dispatcher.call("hover", null, event, byId.get(a.m49), "scatter");
+        hover(event, byId.get(a.m49));
       })
-      .on("mousemove", (event, a) => {
-        if (dispatcher) dispatcher.call("hover", null, event, byId.get(a.m49), "scatter");
-      })
+      .on("mousemove", (event, a) => hover(event, byId.get(a.m49)))
       .on("mouseout", (event, a) => {
         points.filter(d => d.m49 === a.m49).classed("hovered", false);
-        if (dispatcher) dispatcher.call("hover", null, event, null, "scatter");
+        hover(event, null);
       })
       .on("click", (event, a) => clickSelect(event, a.m49));
   }
 
   function pad([lo, hi]) {
+    if (lo == null) return [-1, 1];   // no rows at all
     const slack = (hi - lo) * 0.06 || 1;
     return [lo - slack, hi + slack];
+  }
+
+  // I3: pointer and keyboard hover share one path.
+  function hover(event, d) {
+    if (dispatcher) dispatcher.call("hover", null, event, d, "scatter");
   }
 
   function emit(ids) {
@@ -317,6 +385,7 @@ function quadrantScatter() {
     const set = new Set(ids);
     selected = set;
     points
+      .attr("aria-pressed", d => set.has(d.m49))
       .classed("selected", d => set.has(d.m49))
       .classed("faded", d => set.size > 0 && !set.has(d.m49));
     points.filter(".selected").raise();
@@ -336,11 +405,11 @@ function quadrantScatter() {
 
   function updateNote() {
     if (!noTrendNote) return;
-    const shown = selected.size || rows.length;
+    const total = rows.length + missing;
     noTrendNote.text(
       selected.size
-        ? `${shown} selected · ${missing} countries have no trend`
-        : `${rows.length} countries plotted · ${missing} have no trend`
+        ? `${selected.size} of ${rows.length} plotted countries selected · ${missing} more have no trend and cannot be selected`
+        : `${rows.length} of ${total} countries plotted · ${missing} have no trend on one or both axes`
     );
   }
 
@@ -373,6 +442,7 @@ function quadrantScatter() {
   chart.width = function (_) { return arguments.length ? (width = _, chart) : width; };
   chart.height = function (_) { return arguments.length ? (height = _, chart) : height; };
   chart.margin = function (_) { return arguments.length ? (margin = _, chart) : margin; };
+  chart.title = function (_) { return arguments.length ? (title = _, chart) : title; };
   chart.radius = function (_) { return arguments.length ? (radius = _, chart) : radius; };
   chart.dispatcher = function (_) { return arguments.length ? (dispatcher = _, chart) : dispatcher; };
   chart.annotations = function (_) { return arguments.length ? (annotations = _, chart) : annotations; };

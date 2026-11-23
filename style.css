@@ -153,6 +153,9 @@ h1, h2, h3 {
 .quadrant-scatter .country-point.faded { opacity: 0.2; }
 .quadrant-scatter .brush .selection { fill: #333333; fill-opacity: 0.06; stroke: #5f6368; stroke-dasharray: 3 3; }
 .quadrant-scatter .no-trend-note { fill: #5f6368; font-size: 12px; }
+.quadrant-scatter .chart-title { font-size: 14px; font-weight: 600; }
+.quadrant-scatter .country-point:focus { outline: none; }   /* the .focus-ring circle replaces it */
+.quadrant-scatter .focus-ring { stroke-width: 2.5px; pointer-events: none; }
 
 /* I6: a dimmed legend group, in either view */
 .group-hidden { opacity: 0.08 !important; pointer-events: none; }

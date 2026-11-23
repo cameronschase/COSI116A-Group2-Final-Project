@@ -55,7 +55,9 @@ const SDG = (() => {
   // Zero is the meaningful default: at or above zero the indicator improved.
   const DEFAULT_THRESHOLDS = { poverty: 0, completion: 0 };
   const THRESHOLD_RANGE = {
-    poverty:    { min: -1.5, max: 4, step: 0.1 },
+    // Wide enough that each extreme puts every country on one side: the
+    // poverty slopes in sdg.json run from -1.64 to +4.15 pp/yr.
+    poverty:    { min: -2.0, max: 4.5, step: 0.1 },
     completion: { min: -1.0, max: 4, step: 0.1 },
   };
 
@@ -93,8 +95,8 @@ const SDG = (() => {
   const labelSlope = v => (v == null ? "no trend" : `${fmtSlope(v)} pp/yr`);
 
   const AXIS_LABEL = {
-    poverty:    "Extreme poverty removed (percentage points per year)",
-    completion: "Upper-secondary completion gained (percentage points per year)",
+    poverty:    "Extreme poverty removed per year (pp/yr)",
+    completion: "Upper-secondary completion gained per year (pp/yr)",
   };
 
   // Caption reused under every view that shows a trend (V5).
